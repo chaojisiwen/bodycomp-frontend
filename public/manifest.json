@@ -1,0 +1,21 @@
+{
+  "name": "Equilibrio · 体成分管理",
+  "short_name": "Equilibrio",
+  "description": "智能体成分管理，追踪健康每一步",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["health", "fitness", "lifestyle"],
+  "lang": "zh-CN"
+}

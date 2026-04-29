@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的训练计划 - 预览</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .glass { background: rgba(16, 185, 129, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(16, 185, 129, 0.2); }
+    .card-gradient { background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(20, 184, 166, 0.1)); }
+  </style>
+</head>
+<body class="bg-gray-900 min-h-screen text-white">
+  <div class="max-w-md mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="text-center py-2 mb-6">
+      <h2 class="text-xl font-bold mb-1">我的计划</h2>
+      <p class="text-sm text-gray-400">教练为你定制的专属方案</p>
+    </div>
+
+    <!-- 当前计划卡片 -->
+    <div class="glass rounded-2xl p-5 card-gradient mb-6 cursor-pointer hover:border-emerald-400/40 transition-all">
+      <!-- 标签行 -->
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
+              减脂计划
+            </span>
+            <span class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-xs">
+              剩余 20 天
+            </span>
+          </div>
+          <h3 class="font-bold text-lg">四周减脂计划</h3>
+          <p class="text-xs text-gray-400 mt-0.5">第 8 / 28 天</p>
+        </div>
+        <svg class="w-5 h-5 text-gray-500 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </div>
+
+      <!-- 热量目标 -->
+      <div class="grid grid-cols-3 gap-3 mb-4 p-3 rounded-xl bg-black/20">
+        <div class="text-center">
+          <p class="text-sm font-bold text-white">1500~1800</p>
+          <p class="text-[10px] text-gray-400">目标热量(kcal)</p>
+        </div>
+        <div class="text-center">
+          <p class="text-sm font-bold text-blue-400">120g</p>
+          <p class="text-[10px] text-gray-400">蛋白质</p>
+        </div>
+        <div class="text-center">
+          <p class="text-sm font-bold text-yellow-400">45g</p>
+          <p class="text-[10px] text-gray-400">脂肪</p>
+        </div>
+      </div>
+
+      <!-- 今日训练 -->
+      <div class="flex items-center gap-3 p-3 rounded-xl bg-black/20">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center bg-blue-500/20">
+          <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h4l3-9 4 18 3-9h4"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm font-medium">今日训练：力量训练 · 背部</p>
+          <p class="text-xs text-gray-400 mt-0.5">哑铃划船 4x12 / 引体向上 4x8</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 历史计划 -->
+    <div class="mb-6">
+      <h4 class="font-semibold text-sm text-gray-400 mb-3">历史计划</h4>
+      <div class="space-y-3">
+        <!-- 历史计划1 -->
+        <div class="bg-slate-800/60 rounded-xl p-4 border border-white/10 cursor-pointer hover:bg-slate-800 transition-colors">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-sm font-medium">初始减脂计划</span>
+                <span class="px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 text-xs">减脂计划</span>
+              </div>
+              <p class="text-xs text-gray-500">2026/3/15 · 4 周</p>
+            </div>
+            <div class="flex items-center gap-1">
+              <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-xs text-gray-500">28天</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 历史计划2 -->
+        <div class="bg-slate-800/60 rounded-xl p-4 border border-white/10 cursor-pointer hover:bg-slate-800 transition-colors">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-sm font-medium">增肌计划A</span>
+                <span class="px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 text-xs">增肌计划</span>
+              </div>
+              <p class="text-xs text-gray-500">2026/2/10 · 8 周</p>
+            </div>
+            <div class="flex items-center gap-1">
+              <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-xs text-gray-500">56天</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 计划详情弹窗 (点击卡片触发) -->
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50" id="modal">
+      <div class="bg-slate-800 rounded-2xl w-full max-w-md max-h-[85vh] overflow-y-auto">
+        <!-- 弹窗头部 -->
+        <div class="sticky top-0 bg-slate-800 px-5 py-4 border-b border-white/10 flex items-center justify-between">
+          <h3 class="font-bold text-lg">四周减脂计划</h3>
+          <button class="text-gray-400 hover:text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- 弹窗内容 -->
+        <div class="p-5 space-y-5">
+          <!-- 基本信息 -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="p-3 rounded-xl bg-slate-700/50">
+              <p class="text-xs text-gray-400 mb-1">计划类型</p>
+              <p class="text-sm font-semibold">减脂计划</p>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-700/50">
+              <p class="text-xs text-gray-400 mb-1">计划周期</p>
+              <p class="text-sm font-semibold">4 周</p>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-700/50">
+              <p class="text-xs text-gray-400 mb-1">目标体重</p>
+              <p class="text-sm font-semibold">70 kg</p>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-700/50">
+              <p class="text-xs text-gray-400 mb-1">目标体脂</p>
+              <p class="text-sm font-semibold">18%</p>
+            </div>
+          </div>
+
+          <!-- 每日训练 -->
+          <div>
+            <p class="text-sm font-semibold mb-3">每日训练安排</p>
+            <div class="space-y-2">
+              <!-- 周一 -->
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-500/20 flex-shrink-0">
+                  <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium text-emerald-300">
+                    周一<span class="ml-2 text-xs text-emerald-400 font-normal">(今日)</span>
+                  </p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs font-medium">力量训练</p>
+                  <p class="text-[10px] text-gray-500">背部+二头肌</p>
+                </div>
+              </div>
+
+              <!-- 周二 -->
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/20 flex-shrink-0">
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium">周二</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs font-medium">有氧训练</p>
+                  <p class="text-[10px] text-gray-500">跑步 40 分钟</p>
+                </div>
+              </div>
+
+              <!-- 周三 -->
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-600 flex-shrink-0">
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium">周三</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs font-medium">休息日</p>
+                  <p class="text-[10px] text-gray-500"></p>
+                </div>
+              </div>
+
+              <!-- 周四 -->
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/20 flex-shrink-0">
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium">周四</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs font-medium">力量训练</p>
+                  <p class="text-[10px] text-gray-500">胸部+三头肌</p>
+                </div>
+              </div>
+
+              <!-- 周五 -->
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/20 flex-shrink-0">
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium">周五</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs font-medium">有氧训练</p>
+                  <p class="text-[10px] text-gray-500">HIIT 30 分钟</p>
+                </div>
+              </div>
+
+              <!-- 周六 -->
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/20 flex-shrink-0">
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium">周六</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs font-medium">力量训练</p>
+                  <p class="text-[10px] text-gray-500">腿部+臀</p>
+                </div>
+              </div>
+
+              <!-- 周日 -->
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-600 flex-shrink-0">
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium">周日</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs font-medium">休息日</p>
+                  <p class="text-[10px] text-gray-500"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 营养目标 -->
+          <div>
+            <p class="text-sm font-semibold mb-3">营养目标</p>
+            <div class="grid grid-cols-4 gap-2 text-center">
+              <div class="p-2 rounded-lg bg-slate-700/50">
+                <p class="text-sm font-bold text-white">1500-1800</p>
+                <p class="text-[10px] text-gray-400">热量</p>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-700/50">
+                <p class="text-sm font-bold text-blue-400">120g</p>
+                <p class="text-[10px] text-gray-400">蛋白质</p>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-700/50">
+                <p class="text-sm font-bold text-yellow-400">45g</p>
+                <p class="text-[10px] text-gray-400">脂肪</p>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-700/50">
+                <p class="text-sm font-bold text-orange-400">150g</p>
+                <p class="text-[10px] text-gray-400">碳水</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 教练备注 -->
+          <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+            <p class="text-xs text-amber-400 font-medium mb-1">教练备注</p>
+            <p class="text-sm text-gray-300">注意控制饮食，减少高糖高脂食物摄入。训练后记得补充蛋白质。</p>
+          </div>
+
+          <!-- 关闭按钮 -->
+          <button class="w-full py-3 rounded-xl bg-slate-700 text-gray-300 font-medium hover:bg-slate-600 transition-colors">
+            关闭
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 点击卡片切换弹窗
+    document.querySelector('.glass').addEventListener('click', function() {
+      document.getElementById('modal').classList.toggle('hidden');
+    });
+    document.querySelector('#modal button').addEventListener('click', function() {
+      document.getElementById('modal').classList.add('hidden');
+    });
+  </script>
+</body>
+</html>

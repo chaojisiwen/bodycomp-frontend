@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BodyComp - 体成分管理系统 完整预览</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .glass {
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .tab-active {
+      background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
+    }
+    .tab-icon { transition: all 0.3s; }
+    .tab-btn:hover .tab-icon { transform: scale(1.1); }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .page { animation: slideUp 0.3s ease-out; }
+    .bottom-nav {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen">
+  
+  <!-- 手机框架 -->
+  <div class="max-w-md mx-auto bg-slate-800 min-h-screen relative overflow-hidden">
+    
+    <!-- 状态栏 -->
+    <div class="h-11 bg-slate-900 flex items-center justify-between px-6 text-xs">
+      <span>9:41</span>
+      <div class="flex items-center gap-1">
+        <span>📶</span><span>🔋</span>
+      </div>
+    </div>
+
+    <!-- 页面容器 -->
+    <div id="pages-container" class="pb-20">
+      
+      <!-- ========== 首页 ========== -->
+      <div id="page-home" class="page px-4 py-4 space-y-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-400">早上好</p>
+            <h1 class="text-xl font-bold">会员用户</h1>
+          </div>
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center text-lg font-bold">
+            会
+          </div>
+        </div>
+
+        <!-- 目标卡片 -->
+        <div class="glass rounded-2xl p-4 border-l-4 border-emerald-500">
+          <div class="flex justify-between items-center mb-2">
+            <p class="text-sm text-emerald-400">当前目标</p>
+            <span class="text-sm font-bold text-emerald-400">45%</span>
+          </div>
+          <p class="font-semibold mb-2">减脂计划 · 剩余45天</p>
+          <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full" style="width: 45%"></div>
+          </div>
+        </div>
+
+        <!-- 热量卡片 -->
+        <div class="grid grid-cols-3 gap-2">
+          <div class="glass rounded-xl p-3 text-center">
+            <p class="text-xs text-orange-400 mb-1">摄入</p>
+            <p class="text-xl font-bold text-orange-400">1,560</p>
+            <p class="text-[10px] text-gray-500">kcal</p>
+          </div>
+          <div class="glass rounded-xl p-3 text-center">
+            <p class="text-xs text-blue-400 mb-1">消耗</p>
+            <p class="text-xl font-bold text-blue-400">1,800</p>
+            <p class="text-[10px] text-gray-500">kcal</p>
+          </div>
+          <div class="glass rounded-xl p-3 text-center">
+            <p class="text-xs text-emerald-400 mb-1">缺口</p>
+            <p class="text-xl font-bold text-emerald-400">+240</p>
+            <p class="text-[10px] text-gray-500">kcal</p>
+          </div>
+        </div>
+
+        <!-- 热量状态 -->
+        <div class="glass rounded-xl p-3 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+            <span class="text-xl">✓</span>
+          </div>
+          <div class="flex-1">
+            <p class="font-semibold text-emerald-400">摄入达标</p>
+            <p class="text-xs text-gray-400">热量控制得不错！</p>
+          </div>
+        </div>
+
+        <!-- 营养素进度 -->
+        <div class="glass rounded-xl p-4">
+          <p class="text-sm font-medium mb-3">今日营养</p>
+          <div class="space-y-2">
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-blue-400 w-12">蛋白质</span>
+              <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div class="h-full bg-blue-400 rounded-full" style="width: 70%"></div>
+              </div>
+              <span class="text-xs text-gray-400 w-16 text-right">85g / 120g</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-yellow-400 w-12">脂肪</span>
+              <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div class="h-full bg-yellow-400 rounded-full" style="width: 60%"></div>
+              </div>
+              <span class="text-xs text-gray-400 w-16 text-right">36g / 60g</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-orange-400 w-12">碳水</span>
+              <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div class="h-full bg-orange-400 rounded-full" style="width: 80%"></div>
+              </div>
+              <span class="text-xs text-gray-400 w-16 text-right">120g / 150g</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 快速入口 -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="glass rounded-xl p-4 flex items-center gap-3 cursor-pointer hover:bg-slate-700/50 transition">
+            <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+              <span class="text-xl">📷</span>
+            </div>
+            <div>
+              <p class="font-medium">拍照识别</p>
+              <p class="text-xs text-gray-400">AI智能分析食物</p>
+            </div>
+          </div>
+          <div class="glass rounded-xl p-4 flex items-center gap-3 cursor-pointer hover:bg-slate-700/50 transition">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+              <span class="text-xl">🏋️</span>
+            </div>
+            <div>
+              <p class="font-medium">记录运动</p>
+              <p class="text-xs text-gray-400">添加今日训练</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 成就 -->
+        <div class="glass rounded-xl p-4">
+          <div class="flex justify-between items-center mb-3">
+            <p class="text-sm font-medium">🏆 我的成就</p>
+            <span class="text-xs text-gray-500">2/4</span>
+          </div>
+          <div class="flex gap-2 overflow-x-auto pb-1">
+            <div class="flex-shrink-0 px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30">
+              <p class="text-sm">⭐</p>
+              <p class="text-xs text-amber-400">连续7天</p>
+            </div>
+            <div class="flex-shrink-0 px-3 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30">
+              <p class="text-sm">🏆</p>
+              <p class="text-xs text-emerald-400">过半里程</p>
+            </div>
+            <div class="flex-shrink-0 px-3 py-2 rounded-xl bg-white/5 border border-white/10 opacity-50">
+              <p class="text-sm">🏅</p>
+              <p class="text-xs text-gray-500">待解锁</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== 饮食页 ========== -->
+      <div id="page-intake" class="page hidden px-4 py-4 space-y-4">
+        <h2 class="text-xl font-bold">饮食记录</h2>
+        
+        <!-- 日期选择 -->
+        <div class="flex items-center justify-between">
+          <button class="text-gray-400">←</button>
+          <p class="font-medium">今天 · 4月23日</p>
+          <button class="text-gray-400">→</button>
+        </div>
+
+        <!-- 餐次卡片 -->
+        <div class="space-y-3">
+          <div class="glass rounded-xl p-4">
+            <div class="flex justify-between items-center mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-xl">🌅</span>
+                <span class="font-medium">早餐</span>
+              </div>
+              <span class="text-sm text-orange-400">520 kcal</span>
+            </div>
+            <div class="space-y-2">
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-400">全麦面包</span>
+                <span>120g · 280kcal</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-400">鸡蛋</span>
+                <span>2个 · 140kcal</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-400">牛奶</span>
+                <span>250ml · 100kcal</span>
+              </div>
+            </div>
+            <button class="w-full mt-3 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 text-sm">+ 添加食物</button>
+          </div>
+
+          <div class="glass rounded-xl p-4">
+            <div class="flex justify-between items-center mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-xl">☀️</span>
+                <span class="font-medium">午餐</span>
+              </div>
+              <span class="text-sm text-orange-400">680 kcal</span>
+            </div>
+            <div class="space-y-2">
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-400">糙米饭</span>
+                <span>200g · 260kcal</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-400">鸡胸肉</span>
+                <span>150g · 165kcal</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-400">西兰花</span>
+                <span>100g · 55kcal</span>
+              </div>
+            </div>
+            <button class="w-full mt-3 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 text-sm">+ 添加食物</button>
+          </div>
+
+          <div class="glass rounded-xl p-4 border-dashed border-2 border-gray-600 text-center">
+            <p class="text-gray-400 mb-2">🌙 晚餐</p>
+            <button class="py-2 px-6 rounded-lg bg-emerald-500/20 text-emerald-400 text-sm">+ 添加食物</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== 运动页 ========== -->
+      <div id="page-exercise" class="page hidden px-4 py-4 space-y-4">
+        <h2 class="text-xl font-bold">运动记录</h2>
+
+        <!-- 本周概览 -->
+        <div class="glass rounded-xl p-4">
+          <p class="text-sm font-medium mb-3">本周运动</p>
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div class="text-center p-3 bg-blue-500/10 rounded-xl">
+              <p class="text-2xl font-bold text-blue-400">125</p>
+              <p class="text-xs text-gray-400">总时长(分钟)</p>
+            </div>
+            <div class="text-center p-3 bg-orange-500/10 rounded-xl">
+              <p class="text-2xl font-bold text-orange-400">3,680</p>
+              <p class="text-xs text-gray-400">总消耗(kcal)</p>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mb-2">每日消耗</p>
+          <div class="flex justify-between items-end h-12 gap-1">
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full bg-blue-500/50 rounded-t" style="height: 50%"></div>
+              <span class="text-[10px] text-gray-500">一</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full bg-blue-500/50 rounded-t" style="height: 70%"></div>
+              <span class="text-[10px] text-gray-500">二</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full bg-blue-500/50 rounded-t" style="height: 40%"></div>
+              <span class="text-[10px] text-gray-500">三</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full bg-emerald-500/70 rounded-t" style="height: 85%"></div>
+              <span class="text-[10px] text-emerald-400">四</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full bg-blue-500/50 rounded-t" style="height: 60%"></div>
+              <span class="text-[10px] text-gray-500">五</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full bg-blue-500/50 rounded-t" style="height: 30%"></div>
+              <span class="text-[10px] text-gray-500">六</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full bg-white/10 rounded-t" style="height: 10%"></div>
+              <span class="text-[10px] text-gray-400">日</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 今日记录 -->
+        <div class="glass rounded-xl p-4">
+          <div class="flex justify-between items-center mb-3">
+            <p class="font-medium">今天</p>
+            <p class="text-sm text-emerald-400">消耗 520 kcal · 35分钟</p>
+          </div>
+          <div class="space-y-3">
+            <div class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-xl">
+              <div class="w-10 h-10 rounded-lg bg-blue-500/30 flex items-center justify-center">🏃</div>
+              <div class="flex-1">
+                <p class="font-medium">跑步机慢跑</p>
+                <p class="text-xs text-gray-400">30分钟 · 320kcal</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-xl">
+              <div class="w-10 h-10 rounded-lg bg-purple-500/30 flex items-center justify-center">💪</div>
+              <div class="flex-1">
+                <p class="font-medium">力量训练</p>
+                <p class="text-xs text-gray-400">5分钟 · 200kcal</p>
+              </div>
+            </div>
+          </div>
+          <button class="w-full mt-3 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-white font-medium">+ 记录运动</button>
+        </div>
+      </div>
+
+      <!-- ========== 体数据页 ========== -->
+      <div id="page-body" class="page hidden px-4 py-4 space-y-4">
+        <h2 class="text-xl font-bold">我的体数据</h2>
+
+        <!-- 核心指标 -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="glass rounded-xl p-4">
+            <div class="flex items-center gap-2 text-gray-400 mb-2">
+              <span>⚖️</span><span class="text-sm">体重</span>
+            </div>
+            <p class="text-2xl font-bold">71.2 <span class="text-sm font-normal text-gray-400">kg</span></p>
+            <p class="text-xs text-emerald-400">↓ 1.3kg</p>
+          </div>
+          <div class="glass rounded-xl p-4">
+            <div class="flex items-center gap-2 text-gray-400 mb-2">
+              <span>🔥</span><span class="text-sm">体脂率</span>
+            </div>
+            <p class="text-2xl font-bold">18.2 <span class="text-sm font-normal text-gray-400">%</span></p>
+            <p class="text-xs text-emerald-400">↓ 0.8%</p>
+          </div>
+        </div>
+
+        <!-- 趋势图 -->
+        <div class="glass rounded-xl p-4">
+          <div class="flex justify-between items-center mb-3">
+            <p class="text-sm font-medium">体重趋势</p>
+            <div class="flex gap-1 bg-slate-700 rounded-lg p-1">
+              <button class="px-2 py-0.5 rounded text-[10px] bg-emerald-500 text-white">本周</button>
+              <button class="px-2 py-0.5 rounded text-[10px] text-gray-400">本月</button>
+            </div>
+          </div>
+          <div class="h-24 flex items-end justify-between gap-1 px-2">
+            <div class="flex flex-col items-center gap-1">
+              <div class="w-6 bg-slate-600 rounded-t" style="height: 80%"></div>
+              <span class="text-[10px] text-gray-500">周一</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <div class="w-6 bg-slate-600 rounded-t" style="height: 75%"></div>
+              <span class="text-[10px] text-gray-500">周二</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <div class="w-6 bg-slate-600 rounded-t" style="height: 72%"></div>
+              <span class="text-[10px] text-gray-500">周三</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <div class="w-6 bg-slate-600 rounded-t" style="height: 68%"></div>
+              <span class="text-[10px] text-gray-500">周四</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <div class="w-6 bg-slate-600 rounded-t" style="height: 65%"></div>
+              <span class="text-[10px] text-gray-500">周五</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <div class="w-6 bg-emerald-500/70 rounded-t" style="height: 60%"></div>
+              <span class="text-[10px] text-emerald-400">周六</span>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-4 mt-4 pt-3 border-t border-slate-700">
+            <div class="text-center">
+              <p class="text-xs text-gray-400">起始</p>
+              <p class="font-semibold">72.5kg</p>
+            </div>
+            <div class="text-center">
+              <p class="text-xs text-gray-400">当前</p>
+              <p class="font-semibold text-emerald-400">71.2kg</p>
+            </div>
+            <div class="text-center">
+              <p class="text-xs text-gray-400">变化</p>
+              <p class="font-semibold text-emerald-400">-1.3kg</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="grid grid-cols-2 gap-3">
+          <button class="glass rounded-xl p-4 flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center text-xl">📷</div>
+            <span class="text-sm font-medium">AI拍照识别</span>
+          </button>
+          <button class="glass rounded-xl p-4 flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-xl">✏️</div>
+            <span class="text-sm font-medium">手动添加</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ========== 我的计划页 ========== -->
+      <div id="page-plans" class="page hidden px-4 py-4 space-y-4">
+        <h2 class="text-xl font-bold">我的计划</h2>
+
+        <!-- 暂无计划 -->
+        <div class="glass rounded-2xl p-8 text-center">
+          <div class="w-16 h-16 rounded-full bg-slate-700 mx-auto mb-4 flex items-center justify-center text-3xl">📋</div>
+          <p class="text-lg font-medium mb-2">暂无计划</p>
+          <p class="text-sm text-gray-400">教练为你分配计划后<br>会在这里显示</p>
+        </div>
+
+        <!-- 模拟已有计划的样子 -->
+        <div class="hidden space-y-3">
+          <div class="glass rounded-xl p-4 border-l-4 border-emerald-500">
+            <div class="flex justify-between items-start mb-2">
+              <div>
+                <p class="font-semibold">减脂计划</p>
+                <p class="text-xs text-gray-400">四周减脂计划</p>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-xs">进行中</span>
+            </div>
+            <p class="text-sm text-gray-400 mb-2">第 8 / 28 天</p>
+            <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+              <div class="h-full bg-emerald-400 rounded-full" style="width: 28%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== 教练端首页 ========== -->
+      <div id="page-coach-home" class="page hidden px-4 py-4 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-400">教练端</p>
+            <h1 class="text-xl font-bold">李教练</h1>
+          </div>
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center text-lg font-bold">
+            李
+          </div>
+        </div>
+
+        <!-- 统计概览 -->
+        <div class="grid grid-cols-3 gap-3">
+          <div class="glass rounded-xl p-3 text-center">
+            <p class="text-2xl font-bold text-emerald-400">12</p>
+            <p class="text-xs text-gray-400">我的会员</p>
+          </div>
+          <div class="glass rounded-xl p-3 text-center">
+            <p class="text-2xl font-bold text-orange-400">3</p>
+            <p class="text-xs text-gray-400">待处理预警</p>
+          </div>
+          <div class="glass rounded-xl p-3 text-center">
+            <p class="text-2xl font-bold text-blue-400">8</p>
+            <p class="text-xs text-gray-400">进行中计划</p>
+          </div>
+        </div>
+
+        <!-- 预警中心 -->
+        <div class="glass rounded-xl p-4">
+          <div class="flex justify-between items-center mb-3">
+            <p class="font-medium">⚠️ 预警中心</p>
+            <span class="text-xs text-orange-400 cursor-pointer">查看全部 →</span>
+          </div>
+          <div class="space-y-2">
+            <div class="flex items-center gap-3 p-3 bg-orange-500/10 rounded-lg">
+              <div class="w-8 h-8 rounded-full bg-orange-500/30 flex items-center justify-center text-sm">王</div>
+              <div class="flex-1">
+                <p class="text-sm font-medium">王晓明</p>
+                <p class="text-xs text-gray-400">连续3天未记录饮食</p>
+              </div>
+              <button class="px-3 py-1 rounded bg-orange-500/30 text-orange-400 text-xs">提醒</button>
+            </div>
+            <div class="flex items-center gap-3 p-3 bg-red-500/10 rounded-lg">
+              <div class="w-8 h-8 rounded-full bg-red-500/30 flex items-center justify-center text-sm">张</div>
+              <div class="flex-1">
+                <p class="text-sm font-medium">张伟</p>
+                <p class="text-xs text-gray-400">目标进度严重滞后</p>
+              </div>
+              <button class="px-3 py-1 rounded bg-red-500/30 text-red-400 text-xs">处理</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 最近活动 -->
+        <div class="glass rounded-xl p-4">
+          <p class="font-medium mb-3">最近活动</p>
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">✓</div>
+              <div class="flex-1">
+                <p class="text-sm">李娜完成今日打卡</p>
+                <p class="text-xs text-gray-500">10分钟前</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">📷</div>
+              <div class="flex-1">
+                <p class="text-sm">陈思提交了早餐照片</p>
+                <p class="text-xs text-gray-500">30分钟前</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== 会员详情页 ========== -->
+      <div id="page-member-detail" class="page hidden px-4 py-4 space-y-4">
+        <div class="flex items-center gap-3 mb-4">
+          <button class="text-gray-400">←</button>
+          <h2 class="text-xl font-bold">会员详情</h2>
+        </div>
+
+        <!-- 会员信息 -->
+        <div class="glass rounded-xl p-4 flex items-center gap-4">
+          <div class="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center text-xl font-bold">
+            王
+          </div>
+          <div class="flex-1">
+            <p class="text-lg font-semibold">王晓明</p>
+            <p class="text-sm text-gray-400">会员ID: M001</p>
+            <p class="text-xs text-gray-500">跟进中 · 李教练</p>
+          </div>
+        </div>
+
+        <!-- 当前计划 -->
+        <div class="glass rounded-xl p-4">
+          <p class="text-sm font-medium mb-2">当前计划</p>
+          <div class="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
+            <p class="font-medium text-emerald-400">减脂计划</p>
+            <p class="text-sm text-gray-400">第8天 / 共28天 · 进度45%</p>
+          </div>
+        </div>
+
+        <!-- 数据概览 -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="glass rounded-xl p-3 text-center">
+            <p class="text-lg font-bold text-orange-400">1,560</p>
+            <p class="text-xs text-gray-400">今日摄入(kcal)</p>
+          </div>
+          <div class="glass rounded-xl p-3 text-center">
+            <p class="text-lg font-bold text-blue-400">1,800</p>
+            <p class="text-xs text-gray-400">今日消耗(kcal)</p>
+          </div>
+        </div>
+
+        <!-- 操作 -->
+        <div class="space-y-2">
+          <button class="w-full py-3 rounded-xl bg-emerald-500 text-white font-medium">调整计划</button>
+          <button class="w-full py-3 rounded-xl bg-slate-700 text-white font-medium">发送消息</button>
+        </div>
+      </div>
+
+      <!-- ========== 预警中心页 ========== -->
+      <div id="page-warning" class="page hidden px-4 py-4 space-y-4">
+        <h2 class="text-xl font-bold">预警中心</h2>
+
+        <!-- 筛选 -->
+        <div class="flex gap-2">
+          <button class="px-4 py-2 rounded-full bg-emerald-500 text-white text-sm">全部 5</button>
+          <button class="px-4 py-2 rounded-full bg-slate-700 text-gray-400 text-sm">待处理 3</button>
+          <button class="px-4 py-2 rounded-full bg-slate-700 text-gray-400 text-sm">已处理 2</button>
+        </div>
+
+        <!-- 预警列表 -->
+        <div class="space-y-3">
+          <div class="glass rounded-xl p-4 border-l-4 border-orange-500">
+            <div class="flex justify-between items-start mb-2">
+              <div>
+                <p class="font-medium">连续未打卡</p>
+                <p class="text-sm text-gray-400">王晓明 已连续3天未记录</p>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-orange-500/20 text-orange-400 text-xs">待处理</span>
+            </div>
+            <div class="flex gap-2">
+              <button class="flex-1 py-2 rounded bg-emerald-500/20 text-emerald-400 text-sm">发送提醒</button>
+              <button class="flex-1 py-2 rounded bg-slate-700 text-gray-400 text-sm">标记已处理</button>
+            </div>
+          </div>
+
+          <div class="glass rounded-xl p-4 border-l-4 border-red-500">
+            <div class="flex justify-between items-start mb-2">
+              <div>
+                <p class="font-medium">进度严重滞后</p>
+                <p class="text-sm text-gray-400">张伟 减脂进度落后15%</p>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 text-xs">紧急</span>
+            </div>
+            <div class="flex gap-2">
+              <button class="flex-1 py-2 rounded bg-emerald-500/20 text-emerald-400 text-sm">联系会员</button>
+              <button class="flex-1 py-2 rounded bg-slate-700 text-gray-400 text-sm">调整计划</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== 计划库页 ========== -->
+      <div id="page-plans-library" class="page hidden px-4 py-4 space-y-4">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-bold">计划库</h2>
+          <button class="px-4 py-2 rounded-lg bg-emerald-500 text-white text-sm">+ 新建计划</button>
+        </div>
+
+        <!-- 筛选 -->
+        <div class="flex gap-2 overflow-x-auto pb-2">
+          <button class="px-4 py-2 rounded-full bg-emerald-500 text-white text-sm whitespace-nowrap">全部</button>
+          <button class="px-4 py-2 rounded-full bg-slate-700 text-gray-400 text-sm whitespace-nowrap">减脂</button>
+          <button class="px-4 py-2 rounded-full bg-slate-700 text-gray-400 text-sm whitespace-nowrap">增肌</button>
+          <button class="px-4 py-2 rounded-full bg-slate-700 text-gray-400 text-sm whitespace-nowrap">体能</button>
+        </div>
+
+        <!-- 计划列表 -->
+        <div class="space-y-3">
+          <div class="glass rounded-xl p-4">
+            <div class="flex justify-between items-start mb-2">
+              <div>
+                <p class="font-semibold">四周减脂计划</p>
+                <p class="text-xs text-gray-400">减脂 · 中等强度 · 28天</p>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-xs">已分配 5人</span>
+            </div>
+            <div class="flex gap-2">
+              <button class="flex-1 py-2 rounded bg-emerald-500/20 text-emerald-400 text-sm">分配给会员</button>
+              <button class="py-2 px-4 rounded bg-slate-700 text-gray-400 text-sm">复制</button>
+            </div>
+          </div>
+
+          <div class="glass rounded-xl p-4">
+            <div class="flex justify-between items-start mb-2">
+              <div>
+                <p class="font-semibold">增肌训练计划</p>
+                <p class="text-xs text-gray-400">增肌 · 高强度 · 56天</p>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-xs">已分配 2人</span>
+            </div>
+            <div class="flex gap-2">
+              <button class="flex-1 py-2 rounded bg-emerald-500/20 text-emerald-400 text-sm">分配给会员</button>
+              <button class="py-2 px-4 rounded bg-slate-700 text-gray-400 text-sm">复制</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========== 底部导航（会员端） ========== -->
+    <div id="nav-member" class="bottom-nav fixed bottom-0 left-0 right-0 max-w-md mx-auto px-6 py-2 flex justify-around">
+      <button class="tab-btn flex flex-col items-center py-1 px-2" onclick="showPage('home')">
+        <span class="tab-icon text-xl">🏠</span>
+        <span class="text-[10px] mt-1">首页</span>
+      </button>
+      <button class="tab-btn flex flex-col items-center py-1 px-2" onclick="showPage('intake')">
+        <span class="tab-icon text-xl">🍽️</span>
+        <span class="text-[10px] mt-1 text-gray-400">摄入</span>
+      </button>
+      <button class="tab-btn flex flex-col items-center py-1 px-2" onclick="showPage('exercise')">
+        <span class="tab-icon text-xl">🏋️</span>
+        <span class="text-[10px] mt-1 text-gray-400">消耗</span>
+      </button>
+      <button class="tab-btn flex flex-col items-center py-1 px-2" onclick="showPage('body')">
+        <span class="tab-icon text-xl">📊</span>
+        <span class="text-[10px] mt-1 text-gray-400">数据</span>
+      </button>
+      <button class="tab-btn flex flex-col items-center py-1 px-2" onclick="showPage('profile')">
+        <span class="tab-icon text-xl">👤</span>
+        <span class="text-[10px] mt-1 text-gray-400">我的</span>
+      </button>
+    </div>
+
+    <!-- ========== 底部导航（教练端切换按钮）========== -->
+    <div id="nav-coach-switch" class="bottom-nav fixed bottom-0 left-0 right-0 max-w-md mx-auto px-6 py-3 flex justify-between hidden">
+      <button class="flex items-center gap-2 text-emerald-400" onclick="switchToMember()">
+        <span>👤</span> 切换到会员端
+      </button>
+      <button class="flex items-center gap-2 text-blue-400" onclick="switchToCoach()">
+        切换到教练端 <span>→</span>
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    // 页面切换
+    function showPage(pageId) {
+      // 隐藏所有页面
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      // 显示目标页面
+      document.getElementById('page-' + pageId).classList.remove('hidden');
+
+      // 更新导航高亮
+      const navBtns = document.querySelectorAll('.tab-btn');
+      navBtns.forEach(btn => {
+        btn.querySelector('span:last-child').classList.add('text-gray-400');
+      });
+      event.currentTarget.querySelector('span:last-child').classList.remove('text-gray-400');
+    }
+
+    // 切换到教练端
+    function switchToCoach() {
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      document.getElementById('page-coach-home').classList.remove('hidden');
+      document.getElementById('nav-member').classList.add('hidden');
+      document.getElementById('nav-coach-switch').classList.remove('hidden');
+      showCoachNav('coach-home');
+    }
+
+    // 切换到会员端
+    function switchToMember() {
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      document.getElementById('page-home').classList.remove('hidden');
+      document.getElementById('nav-member').classList.remove('hidden');
+      document.getElementById('nav-coach-switch').classList.add('hidden');
+    }
+
+    // 教练端导航
+    function showCoachNav(pageId) {
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      document.getElementById('page-' + pageId).classList.remove('hidden');
+    }
+  </script>
+
+  <!-- 操作提示 -->
+  <div class="fixed bottom-24 left-1/2 -translate-x-1/2 max-w-md w-full px-4">
+    <div class="glass rounded-xl p-3 text-center">
+      <p class="text-sm text-gray-300">👆 点击底部导航切换页面</p>
+      <p class="text-xs text-gray-500 mt-1">或点击 <span class="text-blue-400 cursor-pointer" onclick="switchToCoach()">这里</span> 切换到教练端</p>
+    </div>
+  </div>
+
+</body>
+</html>
