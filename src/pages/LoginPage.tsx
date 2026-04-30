@@ -34,6 +34,33 @@ export default function LoginPage() {
   const [step, setStep] = useState<'code' | 'password' | 'setPassword'>('code')
   const [loginData, setLoginData] = useState<LoginResponse['data'] | null>(null)
 
+  // ── Mock 模式登录（CloudBase 不可用时降级） ──────────────────
+  const mockLogin = async (code: string) => {
+    const upper = code.trim().toUpperCase()
+    if (!MOCK_VALID_CODES.includes(upper)) {
+      setError('邀请码无效，请输入正确的邀请码')
+      return
+    }
+    const mockRole = upper.startsWith('C-') ? 'coach' : 'member'
+
+    // 检查本地是否已设置过密码
+    const storedPw = localStorage.getItem(`pw_${upper}`)
+    if (storedPw) {
+      setLoginData({ needPassword: true, role: mockRole } as any)
+      setStep('password')
+    } else {
+      setLoginData({
+        role: mockRole,
+        uid: `mock-${upper}`,
+        name: mockRole === 'coach' ? '教练' : '会员',
+        userId: `mock-${upper}`,
+        isFirstLogin: true,
+        needSetPassword: false,
+      })
+      setStep('setPassword')
+    }
+  }
+
   // ── Step 1: 输入邀请码 ───────────────────────────────────────
   const handleCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,34 +74,8 @@ export default function LoginPage() {
       await initCloudbase()
       const app = getApp()
       if (!app) {
-        // Mock 模式（CloudBase 未连通时降级）
-        const upper = code.trim().toUpperCase()
-        if (!MOCK_VALID_CODES.includes(upper)) {
-          setError('邀请码无效，请输入正确的邀请码')
-          setLoading(false)
-          return
-        }
-        // 检查本地是否已设置过密码
-        const storedPw = localStorage.getItem(`pw_${upper}`)
-        if (storedPw) {
-          // 已有密码 → 要求输入密码（保留角色信息）
-          const mockRole = upper.startsWith('C-') ? 'coach' : 'member'
-          setLoginData({ needPassword: true, role: mockRole } as any)
-          setStep('password')
-        } else {
-          // 无密码记录 → 首次或未设密码
-          const mockRole = upper.startsWith('C-') ? 'coach' : 'member'
-          setLoginData({
-            role: mockRole,
-            uid: `mock-${upper}`,
-            name: mockRole === 'coach' ? '教练' : '会员',
-            userId: `mock-${upper}`,
-            isFirstLogin: true,
-            needSetPassword: false,
-          })
-          setStep('setPassword')
-        }
-        setLoading(false)
+        // Mock 模式：CloudBase SDK 未初始化（Vercel 海外部署无法访问腾讯云）
+        await mockLogin(code)
         return
       }
 
@@ -108,7 +109,9 @@ export default function LoginPage() {
       // 登录成功（首次新用户）
       await finishLogin(result.data?.role || 'member', result.data)
     } catch {
-      setError('登录失败，请检查网络')
+      // CloudBase 调用失败（跨海网络问题），降级到 Mock 模式
+      console.warn('[Login] CloudBase 调用失败，降级到 Mock 模式')
+      await mockLogin(code)
     } finally {
       setLoading(false)
     }
