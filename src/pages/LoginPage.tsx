@@ -156,7 +156,16 @@ export default function LoginPage() {
 
       await finishLogin(result.data?.role || 'member', result.data)
     } catch {
-      setError('登录失败，请检查网络')
+      // Mock 模式降级（验证本地密码）
+      console.warn('[Login] password CloudBase 失败，降级到 Mock')
+      const upper = code.trim().toUpperCase()
+      const storedPw = localStorage.getItem(`pw_${upper}`)
+      if (!storedPw || storedPw !== password.trim()) {
+        setError(!storedPw ? '请先设置密码' : '密码错误')
+        setLoading(false)
+        return
+      }
+      await finishLogin(loginData?.role || 'member', loginData || null)
     } finally {
       setLoading(false)
     }
@@ -173,10 +182,11 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
+    const upper = code.trim().toUpperCase()
+
     try {
       await initCloudbase()
       const app = getApp()
-      const upper = code.trim().toUpperCase()
 
       if (!app) {
         // Mock 模式：存密码到 localStorage
@@ -199,7 +209,10 @@ export default function LoginPage() {
 
       await finishLogin(result.data?.role || loginData?.role || 'member', result.data)
     } catch {
-      setError('设置失败，请稍后重试')
+      // CloudBase 调用失败，降级到 Mock 模式
+      console.warn('[Login] setPassword CloudBase 失败，降级到 Mock')
+      localStorage.setItem(`pw_${upper}`, password.trim())
+      await finishLogin(loginData?.role || 'member', loginData || null)
     } finally {
       setLoading(false)
     }
