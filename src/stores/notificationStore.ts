@@ -38,6 +38,10 @@ interface NotificationStore {
   notifications: Notification[]
   unreadCount: number
 
+  // 通知开关
+  notifToggles: Record<string, boolean>
+  setNotifToggle: (key: string, value: boolean) => void
+
   // 云端同步
   syncFromCloud: (cloudNotifications: Notification[]) => void
 
@@ -65,6 +69,17 @@ export const useNotificationStore = create<NotificationStore>()(
     (set) => ({
       notifications: [],
       unreadCount: 0,
+      notifToggles: {
+        训练提醒: true,
+        打卡提醒: true,
+        教练评语: true,
+        活动公告: false,
+      },
+      setNotifToggle: (key, value) => {
+        set(state => ({
+          notifToggles: { ...state.notifToggles, [key]: value },
+        }))
+      },
 
       syncFromCloud: (cloudNotifications) => {
         set(state => {

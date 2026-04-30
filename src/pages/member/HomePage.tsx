@@ -1,14 +1,20 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Camera, Play, Target, Calendar, X } from 'lucide-react'
-import { useTodayCalories } from '@/stores/mealStore'
-import { useTodayCaloriesBurned } from '@/stores/exerciseStore'
-import { useLatestBodyRecord, useBodyTrend } from '@/stores/bodyStore'
+import { useTodayCalories, useTodayProtein, useTodayFat, useTodayCarbs, useMealStore } from '@/stores/mealStore'
+import { useTodayCaloriesBurned, useExerciseStore } from '@/stores/exerciseStore'
+import { useLatestBodyRecord, useBodyTrend, useBodyStore } from '@/stores/bodyStore'
+import { useNotificationStore } from '@/stores/notificationStore'
+import { getCoaches } from '@/cloudbase/services/coach'
+import { usePlanTarget, useSetPlanTarget } from '@/stores/planStore'
+import { useProfileStore } from '@/stores/profileStore'
+import { FullPageLoader, useToast } from '@/components/common'
 
 // 热量目标（从最新体成分数据估算，或使用默认值）
-const DEFAULT_TARGET = {
+// 保留作为类型参考，实际使用从 store 获取的数据
+void {
   startDate: '2026-03-01',
   endDate: '2026-05-30',
   totalDays: 90,
@@ -24,6 +30,30 @@ export function HomePage() {
   const navigate = useNavigate()
   const [showWarning, setShowWarning] = useState(true)
   const [showPlanDetail, setShowPlanDetail] = useState(false)
+  const [editingGoal, setEditingGoal] = useState(false)
+  const [pageLoading, setPageLoading] = useState(true)
+
+  // ── Toast 监听 store error ──
+  const toast = useToast()
+  const bodyError = useBodyStore((s) => s.error)
+  const mealError = useMealStore((s) => s.error)
+  const exerciseError = useExerciseStore((s) => s.error)
+  const profileError = useProfileStore((s) => s.error)
+
+  useEffect(() => {
+    const err = bodyError || mealError || exerciseError || profileError
+    if (err) toast.error(err)
+  }, [bodyError, mealError, exerciseError, profileError, toast])
+
+  // ── 模拟页面初始化加载 ──
+  useEffect(() => {
+    const timer = setTimeout(() => setPageLoading(false), 800)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // ── 可编辑的目标（从 Zustand planStore 读写）──
+  const planTarget = usePlanTarget()
+  const setPlanTarget = useSetPlanTarget()
 
   // ── Store 数据 ──
   const todayCalories = useTodayCalories()
@@ -31,69 +61,72 @@ export function HomePage() {
   const latestBody = useLatestBodyRecord()
   const bodyTrend = useBodyTrend()
   const currentDate = new Date()
-  const startDate = new Date(DEFAULT_TARGET.startDate)
+  const startDate = new Date(planTarget.startDate)
   const completedDays = Math.max(0, Math.floor((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)))
-  const totalDays = DEFAULT_TARGET.totalDays
+  const totalDays = planTarget.totalDays
   const daysLeft = Math.max(0, totalDays - completedDays)
   const progress = totalDays > 0 ? Math.min(100, Math.round((completedDays / totalDays) * 100)) : 0
 
   // 缺口 = 消耗 - 摄入（正值表示有热量缺口，利于减脂）
   const calorieGap = todayBurned - todayCalories
 
-  // 营养素计算
-  const proteinTarget = latestBody?.muscle_mass ? Math.round(latestBody.muscle_mass * 1.8) : 120
-  const proteinPercent = Math.round((todayCalories * 0.15 / 4) / proteinTarget * 100)
-  const fatTarget = 60
-  const fatPercent = Math.round((todayCalories * 0.25 / 9) / fatTarget * 100)
-  const carbsTarget = 150
-  const carbsPercent = Math.round((todayCalories * 0.45 / 4) / carbsTarget * 100)
+  // 营养素计算（真实摄入）
+  const todayProtein = useTodayProtein()
+  const todayFat = useTodayFat()
+  const todayCarbs = useTodayCarbs()
+
+  const proteinTarget = planTarget.targetProtein ?? (latestBody?.muscle_mass ? Math.round(latestBody.muscle_mass * 1.8) : 120)
+  const proteinPercent = proteinTarget > 0 ? Math.min(100, Math.round(todayProtein / proteinTarget * 100)) : 0
+  const fatTarget = planTarget.targetFat ?? 60
+  const fatPercent = fatTarget > 0 ? Math.min(100, Math.round(todayFat / fatTarget * 100)) : 0
+  const carbsTarget = planTarget.targetCarb ?? 150
+  const carbsPercent = carbsTarget > 0 ? Math.min(100, Math.round(todayCarbs / carbsTarget * 100)) : 0
 
   // 预警：热量摄入偏低时提示
   const showCalorieWarning = todayCalories > 0 && todayCalories < 1200
 
-  // ── 教练列表 ──
-  const availableCoaches = [
-    { id: 'c001', name: '李教练', avatar: '李', tags: ['国家一级健身教练', '减脂专家'], rating: 4.9 },
-    { id: 'c002', name: '王教练', avatar: '王', tags: ['增肌专家', '运动康复'], rating: 4.7 },
-    { id: 'c003', name: '张教练', avatar: '张', tags: ['马拉松教练', '体能训练'], rating: 4.8 },
-  ]
-
-  // ── 教练绑定状态（与 MemberProfilePage 同步） ──
-  const [hasCoach, setHasCoach] = useState<boolean>(() => {
-    const saved = localStorage.getItem('bodycomp_hasCoach')
-    return saved !== null ? saved === 'true' : true
-  })
-  const [coachId, setCoachId] = useState<string>(() => {
-    return localStorage.getItem('bodycomp_coachId') || 'c001'
-  })
-  const currentCoach = availableCoaches.find(c => c.id === coachId) || availableCoaches[0]
-
-  // 监听其他页面修改教练状态
+  // ── 教练列表（从 API 获取，降级为空） ──
+  const [availableCoaches, setAvailableCoaches] = useState<{ id: string; name: string; avatar: string; tags: string[]; rating: number }[]>([])
   useEffect(() => {
-    const handleStorage = () => {
-      const saved = localStorage.getItem('bodycomp_hasCoach')
-      setHasCoach(saved !== null ? saved === 'true' : true)
-      const savedCoachId = localStorage.getItem('bodycomp_coachId')
-      if (savedCoachId) setCoachId(savedCoachId)
-      else if (saved === 'false') setCoachId('c001')
-    }
-    window.addEventListener('storage', handleStorage)
-    // 也轮询本地值（同一页面内修改不会触发 storage 事件）
-    const interval = setInterval(handleStorage, 500)
-    return () => {
-      window.removeEventListener('storage', handleStorage)
-      clearInterval(interval)
-    }
+    getCoaches({ verified: true }).then((coaches) => {
+      if (coaches && coaches.length > 0) {
+        setAvailableCoaches(coaches.map(c => ({
+          id: c._id || c.user_id || '',
+          name: (c as any).name || c.title || '教练',
+          avatar: ((c as any).name || c.title || '教').charAt(0),
+          tags: Array.isArray((c as any).specialty) ? (c as any).specialty : (c.specialty ? [c.specialty] : []),
+          rating: c.rating || 0,
+        })))
+      }
+    }).catch(() => {})
   }, [])
 
-  const getCalorieColor = (diff: number) => {
+  // ── 教练绑定状态（从 profileStore 读取） ──
+  const hasCoach = useProfileStore((s) => s.hasCoach)
+  const coachId = useProfileStore((s) => s.currentCoach?.id ?? '')
+  const currentCoach = availableCoaches.find(c => c.id === coachId) || availableCoaches[0]
+
+  // ── 教练评语（从通知 store 获取真实数据） ──
+  const { notifications } = useNotificationStore()
+  const latestCoachComment = notifications
+    .filter(n => n.type === 'comment')
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+
+  const getCalorieColor = useCallback((diff: number) => {
     if (diff < -200) return 'text-red-400'
     if (diff > 200) return 'text-yellow-400'
     return 'text-emerald-400'
-  }
+  }, [])
 
   return (
-    <div className="space-y-4 py-4">
+    <>
+      {pageLoading ? (
+        <div className="space-y-4 py-4">
+          {/* Loading skeleton */}
+          <FullPageLoader />
+        </div>
+      ) : (
+      <div className="space-y-4 py-4">
       {/* Target Banner */}
       <Card
         className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border-emerald-500/30 cursor-pointer hover:border-emerald-500/50 transition-colors"
@@ -101,9 +134,12 @@ export function HomePage() {
       >
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-sm text-emerald-400">当前目标</p>
-              <p className="text-lg font-bold">减脂计划 · 剩余{daysLeft}天</p>
+              <div>
+                <p className="text-sm text-emerald-400">当前目标</p>
+                <p className="text-lg font-bold">
+                  {planTarget.targetCalories <= 1600 ? '减脂' : planTarget.targetCalories >= 2200 ? '增肌' : '维持'}计划
+                  · 剩余{daysLeft > 0 ? daysLeft : 0}天
+                </p>
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-emerald-400">{progress}%</p>
@@ -151,7 +187,7 @@ export function HomePage() {
           <div className="mb-3">
             <div className="flex justify-between text-xs mb-1">
               <span className="text-blue-400">蛋白质</span>
-              <span className="text-gray-400">{Math.round(todayCalories * 0.15 / 4)}/{proteinTarget}g</span>
+              <span className="text-gray-400">{todayProtein}/{proteinTarget}g</span>
             </div>
             <Progress value={Math.min(proteinPercent, 100)} className="h-2" indicatorClassName="bg-blue-500" />
           </div>
@@ -160,7 +196,7 @@ export function HomePage() {
           <div className="mb-3">
             <div className="flex justify-between text-xs mb-1">
               <span className="text-yellow-400">脂肪</span>
-              <span className="text-gray-400">{Math.round(todayCalories * 0.25 / 9)}/{fatTarget}g</span>
+              <span className="text-gray-400">{todayFat}/{fatTarget}g</span>
             </div>
             <Progress value={Math.min(fatPercent, 100)} className="h-2" indicatorClassName="bg-yellow-500" />
           </div>
@@ -169,7 +205,7 @@ export function HomePage() {
           <div>
             <div className="flex justify-between text-xs mb-1">
               <span className="text-purple-400">碳水</span>
-              <span className="text-gray-400">{Math.round(todayCalories * 0.45 / 4)}/{carbsTarget}g</span>
+              <span className="text-gray-400">{todayCarbs}/{carbsTarget}g</span>
             </div>
             <Progress value={Math.min(carbsPercent, 100)} className="h-2" indicatorClassName="bg-purple-500" />
           </div>
@@ -197,8 +233,8 @@ export function HomePage() {
         </Card>
       )}
 
-      {/* Coach Message — 解绑教练后不显示 */}
-      {hasCoach && (
+      {/* Coach Message — 解绑教练后不显示，有评语显示真实评语 */}
+      {hasCoach && latestCoachComment && (
         <Card>
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
@@ -207,15 +243,24 @@ export function HomePage() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="font-medium">{currentCoach.name}</p>
+                  <p className="font-medium">{currentCoach?.name || '教练'}</p>
                   <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
                     评语
                   </span>
                 </div>
                 <p className="text-sm text-gray-300 mt-1">
-                  今天的训练强度不错！记得晚上多补充点蛋白质，配合减脂效果会更好。
+                  {latestCoachComment.content}
                 </p>
-                <p className="text-xs text-gray-500 mt-2">2小时前</p>
+                <p className="text-xs text-gray-500 mt-2">
+                  {(() => {
+                    const diff = Date.now() - new Date(latestCoachComment.createdAt).getTime()
+                    const mins = Math.floor(diff / 60000)
+                    if (mins < 60) return `${mins}分钟前`
+                    const hours = Math.floor(mins / 60)
+                    if (hours < 24) return `${hours}小时前`
+                    return `${Math.floor(hours / 24)}天前`
+                  })()}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -254,7 +299,7 @@ export function HomePage() {
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Target className="w-5 h-5 text-emerald-400" />
-                减脂计划详情
+                {planTarget.targetCalories <= 1600 ? '减脂' : planTarget.targetCalories >= 2200 ? '增肌' : '维持'}计划详情
               </h3>
               <button
                 onClick={() => setShowPlanDetail(false)}
@@ -271,14 +316,32 @@ export function HomePage() {
                   <Calendar className="w-4 h-4" />
                   开始日期
                 </div>
-                <p className="font-semibold">2026-03-01</p>
+                {editingGoal ? (
+                  <input
+                    type="date"
+                    value={planTarget.startDate}
+                    onChange={(e) => setPlanTarget({ ...planTarget, startDate: e.target.value })}
+                    className="w-full bg-white/10 rounded-lg px-2 py-1 text-sm border border-white/20 focus:border-emerald-400 focus:outline-none"
+                  />
+                ) : (
+                  <p className="font-semibold">{planTarget.startDate}</p>
+                )}
               </div>
               <div className="bg-white/5 rounded-xl p-4">
                 <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
                   <Calendar className="w-4 h-4" />
                   结束日期
                 </div>
-                <p className="font-semibold">2026-05-30</p>
+                {editingGoal ? (
+                  <input
+                    type="date"
+                    value={planTarget.endDate}
+                    onChange={(e) => setPlanTarget({ ...planTarget, endDate: e.target.value })}
+                    className="w-full bg-white/10 rounded-lg px-2 py-1 text-sm border border-white/20 focus:border-emerald-400 focus:outline-none"
+                  />
+                ) : (
+                  <p className="font-semibold">{planTarget.endDate}</p>
+                )}
               </div>
             </div>
 
@@ -286,38 +349,39 @@ export function HomePage() {
             <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-xl p-4 mb-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-emerald-400">总体进度</span>
-                <span className="text-2xl font-bold text-emerald-400">50%</span>
+                <span className="text-2xl font-bold text-emerald-400">{progress}%</span>
               </div>
-              <Progress value={50} className="h-3" indicatorClassName="bg-gradient-to-r from-emerald-400 to-cyan-400" />
+              <Progress value={progress} className="h-3" indicatorClassName="bg-gradient-to-r from-emerald-400 to-cyan-400" />
               <div className="flex justify-between text-xs text-gray-400 mt-2">
-                <span>已进行 45 天</span>
-                <span>剩余 45 天</span>
+                <span>已进行 {completedDays} 天</span>
+                <span>剩余 {daysLeft} 天</span>
               </div>
             </div>
 
             {/* 每日目标 */}
             <h4 className="text-sm font-medium text-gray-400 mb-3">每日营养目标</h4>
             <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="bg-orange-500/10 rounded-xl p-4 text-center">
-                <p className="text-xs text-orange-400 mb-1">热量</p>
-                <p className="text-xl font-bold text-orange-400">1800</p>
-                <p className="text-xs text-gray-500">kcal</p>
-              </div>
-              <div className="bg-blue-500/10 rounded-xl p-4 text-center">
-                <p className="text-xs text-blue-400 mb-1">蛋白质</p>
-                <p className="text-xl font-bold text-blue-400">120</p>
-                <p className="text-xs text-gray-500">g</p>
-              </div>
-              <div className="bg-yellow-500/10 rounded-xl p-4 text-center">
-                <p className="text-xs text-yellow-400 mb-1">脂肪</p>
-                <p className="text-xl font-bold text-yellow-400">60</p>
-                <p className="text-xs text-gray-500">g</p>
-              </div>
-              <div className="bg-purple-500/10 rounded-xl p-4 text-center">
-                <p className="text-xs text-purple-400 mb-1">碳水</p>
-                <p className="text-xl font-bold text-purple-400">150</p>
-                <p className="text-xs text-gray-500">g</p>
-              </div>
+              {[
+                { label: '热量', color: 'orange', key: 'targetCalories', unit: 'kcal' },
+                { label: '蛋白质', color: 'blue', key: 'targetProtein', unit: 'g' },
+                { label: '脂肪', color: 'yellow', key: 'targetFat', unit: 'g' },
+                { label: '碳水', color: 'purple', key: 'targetCarb', unit: 'g' },
+              ].map(item => (
+                <div key={item.key} className={`bg-${item.color}-500/10 rounded-xl p-4 text-center`}>
+                  <p className={`text-xs text-${item.color}-400 mb-1`}>{item.label}</p>
+                  {editingGoal ? (
+                    <input
+                      type="number"
+                      value={(planTarget as any)[item.key]}
+                      onChange={(e) => setPlanTarget({ ...planTarget, [item.key]: Number(e.target.value) })}
+                      className="w-20 text-center bg-white/10 rounded-lg px-2 py-1 text-xl font-bold border border-white/20 focus:border-emerald-400 focus:outline-none"
+                    />
+                  ) : (
+                    <p className={`text-xl font-bold text-${item.color}-400`}>{(planTarget as any)[item.key]}</p>
+                  )}
+                  <p className="text-xs text-gray-500">{item.unit}</p>
+                </div>
+              ))}
             </div>
 
             {/* 最近体成分记录 */}
@@ -327,7 +391,7 @@ export function HomePage() {
                 {bodyTrend.slice(0, 5).map((record, index) => (
                   <div key={index} className="flex items-center justify-between bg-white/5 rounded-xl p-3">
                     <span className="text-sm text-gray-400">
-                      {new Date(record.record_date).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}
+                      {new Date(record.record_date!).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}
                     </span>
                     <div className="flex items-center gap-4">
                       <span className="text-sm">
@@ -350,19 +414,45 @@ export function HomePage() {
 
             {/* 操作按钮 */}
             <div className="mt-6 space-y-3">
-              <button className="w-full py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-colors">
-                修改计划目标
-              </button>
-              <button
-                onClick={() => setShowPlanDetail(false)}
-                className="w-full py-3 rounded-xl bg-white/10 text-gray-300 hover:bg-white/20 transition-colors"
-              >
-                关闭
-              </button>
+              {editingGoal ? (
+                <button
+                  onClick={() => {
+                    setEditingGoal(false)
+                  }}
+                  className="w-full py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-colors"
+                >
+                  保存修改
+                </button>
+              ) : (
+                <button
+                  onClick={() => setEditingGoal(true)}
+                  className="w-full py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-colors"
+                >
+                  修改计划目标
+                </button>
+              )}
+              {editingGoal && (
+                <button
+                  onClick={() => setEditingGoal(false)}
+                  className="w-full py-3 rounded-xl bg-white/10 text-gray-300 hover:bg-white/20 transition-colors"
+                >
+                  取消修改
+                </button>
+              )}
+              {!editingGoal && (
+                <button
+                  onClick={() => setShowPlanDetail(false)}
+                  className="w-full py-3 rounded-xl bg-white/10 text-gray-300 hover:bg-white/20 transition-colors"
+                >
+                  关闭
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
-    </div>
+      </div>
+      )}
+    </>
   )
 }

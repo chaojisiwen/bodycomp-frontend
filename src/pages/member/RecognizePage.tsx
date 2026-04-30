@@ -1,13 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Camera, RotateCcw, Check, Loader2, AlertCircle, X, Scale, ChevronRight } from 'lucide-react'
 import { useRecognizeStore, type RecognizedFoodItem, type RecognizeAnalysis } from '@/stores'
 import { useMealStore } from '@/stores/mealStore'
 import { useProfileStore } from '@/stores/profileStore'
 import { recognizeFood, calculateTotalNutrition, calibrateFist } from '@/cloudbase/services/recognizeApi'
 import type { IFoodItem } from '@/cloudbase/types'
-import heic2any from 'heic2any'
-// @ts-ignore - libheif-js 没有类型定义
-import Libheif from 'libheif-js'
 
 type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 type Step = 'idle' | 'camera' | 'preview' | 'recognizing' | 'result' | 'error'
@@ -89,102 +86,12 @@ export function RecognizePage() {
     })
   }
 
-  // 将 HEIC/HEIF 格式转换为 JPEG base64
-  const convertHeicToJpeg = async (file: File): Promise<string> => {
+  // 将 HEIC/HEIF 格式转换为 JPEG base64（使用懒加载的重型库）
+  const convertHeicToJpeg = useCallback(async (file: File): Promise<string> => {
     console.log('[RecognizePage] 检测到 HEIC/HEIF 格式，开始转换...')
-    
-    // 方案1：使用 libheif-js（WASM 版本，支持更多格式）
-    try {
-      console.log('[RecognizePage] 尝试方案1: libheif-js')
-      const arrayBuffer = await file.arrayBuffer()
-      
-      // libheif-js 正确用法：new libheif.HeifDecoder()
-      const decoder = new Libheif.HeifDecoder()
-      const images = decoder.decode(arrayBuffer)
-      
-      if (!images.length) {
-        throw new Error('HEIC 文件中没有图片')
-      }
-      
-      const image = images[0]
-      const width = image.get_width()
-      const height = image.get_height()
-      console.log('[RecognizePage] HEIC 尺寸:', width, 'x', height)
-      
-      // 解码图片数据
-      const imageData = await new Promise<ImageData>((resolve, reject) => {
-        image.display(
-          { data: new Uint8ClampedArray(width * height * 4), width, height },
-          (result: { data: Uint8ClampedArray } | null) => {
-            if (!result) {
-              reject(new Error('HEIF 处理错误'))
-              return
-            }
-            try {
-              resolve(new ImageData(result.data, width, height))
-            } catch (e) {
-              reject(e)
-            }
-          }
-        )
-      })
-      
-      // 绘制到 Canvas 并导出为 JPEG
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-      const ctx = canvas.getContext('2d')!
-      ctx.putImageData(imageData, 0, 0)
-      
-      const jpegBase64 = canvas.toDataURL('image/jpeg', 0.85)
-      console.log('[RecognizePage] libheif-js 转换成功，长度:', jpegBase64.length)
-      return jpegBase64
-    } catch (err) {
-      console.error('[RecognizePage] 方案1失败:', err)
-      
-      // 方案2：使用 heic2any 库
-      try {
-        console.log('[RecognizePage] 尝试方案2: heic2any')
-        const result = await heic2any({
-          blob: file,
-          toType: 'image/jpeg',
-          quality: 0.85,
-        })
-        
-        console.log('[RecognizePage] heic2any 返回类型:', typeof result)
-        
-        // 处理返回结果
-        let blob: Blob | null = null
-        
-        if (Array.isArray(result)) {
-          blob = result[0] as Blob
-        } else if (result instanceof Blob) {
-          blob = result
-        }
-        
-        if (!blob) {
-          throw new Error('无法获取转换后的图片数据')
-        }
-        
-        console.log('[RecognizePage] Blob 信息:', blob.size, 'bytes,', blob.type)
-        
-        // 将 Blob 转换为 base64
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onload = () => resolve(reader.result as string)
-          reader.onerror = reject
-          reader.readAsDataURL(blob!)
-        })
-        
-        console.log('[RecognizePage] 方案2转换成功，长度:', base64.length)
-        return base64
-      } catch (err2) {
-        console.error('[RecognizePage] 方案2失败:', err2)
-        
-        throw new Error('您的照片格式暂不支持（ERR_LIBHEIF format not supported）。请在 iPhone 上将照片另存为 JPG 格式后重试。')
-      }
-    }
-  }
+    const { convertHeicToJpeg: heicConvert } = await import('@/utils/heicConvert')
+    return heicConvert(file)
+  }, [])
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -336,23 +243,8 @@ export function RecognizePage() {
 
     if (isHeic) {
       try {
-        const arrayBuffer = await file.arrayBuffer()
-        const decoder = new Libheif.HeifDecoder()
-        const images = decoder.decode(arrayBuffer)
-        if (!images.length) throw new Error('HEIC 无图片')
-        const img = images[0]
-        const w = img.get_width(), h = img.get_height()
-        const imageData = await new Promise<ImageData>((resolve, reject) => {
-          img.display({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h },
-            (result: { data: Uint8ClampedArray } | null) => {
-              if (!result) { reject(new Error('HEIF 处理错误')); return }
-              resolve(new ImageData(result.data, w, h))
-            })
-        })
-        const canvas = document.createElement('canvas')
-        canvas.width = w; canvas.height = h
-        canvas.getContext('2d')!.putImageData(imageData, 0, 0)
-        dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+        const { convertHeicToJpeg: heicConvert } = await import('@/utils/heicConvert')
+        dataUrl = await heicConvert(file)
       } catch {
         alert('图片格式转换失败，请保存为 JPG 后重试')
         return

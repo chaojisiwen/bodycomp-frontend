@@ -9,6 +9,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { getCoach } from '@/cloudbase/services/coach'
 import { getCoachMembers } from '@/cloudbase/services/coach'
+import type { ICoach } from '@/cloudbase/types'
 
 // ============================================================
 // 类型定义
@@ -89,15 +90,15 @@ export const useCoachProfileStore = create<CoachProfileState>()(
           if (coachData) {
             const profile: CoachProfile = {
               id: coachId,
-              name: (coachData as any).name || coachData.title || '教练',
-              avatar: (coachData as any).avatar,
+              name: (coachData as ICoach & { name?: string }).name || coachData.title || '教练',
+              avatar: (coachData as ICoach).avatar,
               phone: '', // 敏感信息不存储
               title: coachData.title,
-              specialty: coachData.specialty,
+              specialty: Array.isArray(coachData.specialty) ? coachData.specialty.join(', ') : coachData.specialty || '',
               bio: coachData.bio,
               rating: coachData.rating || 0,
               memberCount: membersData.length || coachData.member_count || 0,
-              certifications: (coachData as any).certifications || [],
+              certifications: (coachData as ICoach).certifications || [],
               years: 0, // 从业年限暂不显示
               verified: coachData.verified || false,
             }
@@ -120,10 +121,12 @@ export const useCoachProfileStore = create<CoachProfileState>()(
           }
         } catch (err) {
           console.warn('[CoachProfile] 拉取失败:', err)
+          const msg = (err as Error).message || '获取教练信息失败'
           set({
-            error: '获取教练信息失败',
+            error: msg,
             isLoading: false,
           })
+          setTimeout(() => set((s) => s.error === msg ? { error: null } : {}), 3000)
         }
       },
 

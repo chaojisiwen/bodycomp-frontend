@@ -72,17 +72,12 @@ export async function getNotifications(
     const db = getApp()?.database()
     if (!db) return []
 
-    const baseQuery = db.collection(COLLECTIONS.NOTIFICATIONS)
-      .where({ user_id: userId }) as any
-
-    const filteredQuery = options?.unreadOnly
-      ? baseQuery.where({ is_read: false })
-      : baseQuery
-
-    const res = await filteredQuery
+    const query = db.collection(COLLECTIONS.NOTIFICATIONS)
+      .where({ user_id: userId, ...(options?.unreadOnly ? { is_read: false } : {}) })
       .orderBy('created_at', 'desc')
       .limit(options?.limit || 50)
-      .get()
+
+    const res = await query.get()
 
     return res.data as INotification[]
   } catch (error) {
@@ -274,17 +269,12 @@ export async function getCoachWarnings(
     const db = getApp()?.database()
     if (!db) return []
 
-    const baseQuery = db.collection(COLLECTIONS.WARNINGS)
-      .where({ coach_id: coachId }) as any
-
-    const filteredQuery = options?.status
-      ? baseQuery.where({ status: options.status })
-      : baseQuery
-
-    const res = await filteredQuery
+    const query = db.collection(COLLECTIONS.WARNINGS)
+      .where({ coach_id: coachId, ...(options?.status ? { status: options.status } : {}) })
       .orderBy('created_at', 'desc')
       .limit(options?.limit || 100)
-      .get()
+
+    const res = await query.get()
 
     return res.data as IWarningRecord[]
   } catch (error) {

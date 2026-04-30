@@ -205,7 +205,7 @@ export function CoachMemberDetailPage() {
 
   // ── 近期记录（体成分趋势）──
   const recentRecords = bodyRecords.length > 0 ? bodyRecords.slice(0, 7).reverse().map(r => ({
-    date: new Date(r.record_date).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
+    date: new Date(r.record_date!).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
     weight: r.weight || 0,
     fat: r.body_fat || 0,
     calories: 1800,
@@ -1022,7 +1022,7 @@ export function CoachMemberDetailPage() {
                       <div className="flex items-center gap-1">
                         <input
                           type="number"
-                          value={(planData as any)[item.key]}
+                          value={(planData as unknown as Record<string, number>)[item.key]}
                           onChange={e => setPlanData(p => ({ ...p, [item.key]: Number(e.target.value) }))}
                           className="w-16 bg-slate-900 rounded px-2 py-1 text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                         />
@@ -1030,7 +1030,7 @@ export function CoachMemberDetailPage() {
                       </div>
                     )
                   ) : (
-                    <p className={`text-lg font-bold ${item.color}`}>{item.getter ? item.getter() : `${(planData as any)[item.key]}${item.unit}`}</p>
+                    <p className={`text-lg font-bold ${item.color}`}>{item.getter ? item.getter() : `${(planData as unknown as Record<string, number>)[item.key]}${item.unit}`}</p>
                   )}
                   {!isEditingPlan && <p className="text-xs text-slate-500 mt-0.5">{item.unit}</p>}
                 </div>

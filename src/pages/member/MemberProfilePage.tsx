@@ -18,7 +18,6 @@ import {
   Camera,
   User,
   AlertTriangle,
-  Dumbbell,
   Salad,
   CalendarDays,
   BellRing,
@@ -31,6 +30,7 @@ import {
 import { Card } from '@/components/ui/card'
 import { useProfileStore } from '@/stores'
 import { useNotificationStore } from '@/stores/notificationStore'
+import { usePlanTarget } from '@/stores/planStore'
 import { getCoaches } from '@/cloudbase/services/coach'
 
 // ─── 通用弹窗容器 ───────────────────────────────────────────────
@@ -152,9 +152,19 @@ export function MemberProfilePage() {
   const navigate = useNavigate()
 
   // ── profileStore（头像、姓名、会员编号、打卡天数、目标） ──
-  const { profile, setGoal, hasCoach, setHasCoach, currentCoach, setCoach } = useProfileStore()
-  const { name, memberId, checkInDays, goal } = profile
+  const { profile, setProfile, setGoal, hasCoach, setHasCoach, currentCoach, setCoach } = useProfileStore()
+  const { name, memberId, checkInDays, goal, phone: storedPhone, avatar: storedAvatar } = profile
   const { notifications, unreadCount } = useNotificationStore()
+
+  // ── 账户设置编辑状态 ──
+  const [editName, setEditName] = useState(name)
+  const [editPhone, setEditPhone] = useState(storedPhone || '')
+  const [editAvatar, setEditAvatar] = useState(storedAvatar || '')
+  const [editingField, setEditingField] = useState<string | null>(null)
+
+  // 同步 profile 变化到编辑状态
+  useEffect(() => { setEditName(name) }, [name])
+  useEffect(() => { setEditPhone(storedPhone || '') }, [storedPhone])
 
   // ── 教练列表（从 API 真实获取）─────────────────────────────
   const [availableCoaches, setAvailableCoaches] = useState<{ id: string; name: string; avatar: string; tags: string[]; rating: number }[]>([])
@@ -171,12 +181,8 @@ export function MemberProfilePage() {
           rating: c.rating || 0,
         })))
       } else {
-        // API 无数据时降级显示示例数据
-        setAvailableCoaches([
-          { id: 'c001', name: '李教练', avatar: '李', tags: ['国家一级健身教练', '减脂专家'], rating: 4.9 },
-          { id: 'c002', name: '王教练', avatar: '王', tags: ['增肌专家', '运动康复'], rating: 4.7 },
-          { id: 'c003', name: '张教练', avatar: '张', tags: ['马拉松教练', '体能训练'], rating: 4.8 },
-        ])
+        // API 无数据时保持空列表，UI 会显示「暂无可用教练」
+        setAvailableCoaches([])
       }
       setCoachesLoading(false)
     }).catch(() => {
@@ -187,15 +193,8 @@ export function MemberProfilePage() {
   // ── 教练选择状态（绑定时用） ──
   const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null)
 
-  // ── 教练绑定状态同步到 localStorage（其他页面依赖） ──
-  useEffect(() => {
-    localStorage.setItem('bodycomp_hasCoach', String(hasCoach))
-    if (currentCoach) {
-      localStorage.setItem('bodycomp_coachId', currentCoach.id)
-    } else {
-      localStorage.removeItem('bodycomp_coachId')
-    }
-  }, [hasCoach, currentCoach])
+  // ── 教练绑定状态同步（已由 persist middleware 自动处理） ──
+  // (noop — profileStore's persist middleware handles persistence)
 
   // ── 解绑 ──
   const handleUnbind = () => {
@@ -233,15 +232,11 @@ export function MemberProfilePage() {
   const open = (m: typeof modal) => setModal(m)
   const close = () => setModal(null)
 
-  // ── 通知开关状态 ──
-  const [notifToggles, setNotifToggles] = useState({
-    训练提醒: true,
-    打卡提醒: true,
-    教练评语: true,
-    活动公告: false,
-  })
-  const toggleNotif = (key: keyof typeof notifToggles) =>
-    setNotifToggles(prev => ({ ...prev, [key]: !prev[key] }))
+  // ── 通知开关状态（从 store 持久化） ──
+  const { notifToggles, setNotifToggle } = useNotificationStore()
+  const toggleNotif = (key: string) => {
+    setNotifToggle(key, !notifToggles[key])
+  }
 
   // ── 目标编辑状态（从 store 初始化） ──
   const [goalWeight, setGoalWeight] = useState(goal.targetWeight.toString())
@@ -268,9 +263,8 @@ export function MemberProfilePage() {
 
   // ── 退出登录 ──
   const handleLogout = () => {
-    // profileStore 数据保留，方便下次登录时恢复
-    localStorage.removeItem('bodycomp_hasCoach')
-    localStorage.removeItem('bodycomp_coachId')
+    setHasCoach(false)
+    setCoach(null)
     navigate('/login')
   }
 
@@ -280,7 +274,7 @@ export function MemberProfilePage() {
       title: '健康管理',
       items: [
         { icon: <Target className="w-5 h-5 text-emerald-400" />, label: '目标设置', badge: `体重${goal.targetWeight}kg`, onClick: () => open('goal') },
-        { icon: <Database className="w-5 h-5 text-blue-400" />, label: '数据更新', badge: '更新于04-17', onClick: () => navigate('/member/body-data') },
+        { icon: <Database className="w-5 h-5 text-blue-400" />, label: '数据更新', badge: `更新于${new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }).replace('-', '/')}`, onClick: () => navigate('/member/body-data') },
         { icon: <FileText className="w-5 h-5 text-purple-400" />, label: '我的方案', badge: '减脂计划', onClick: () => open('myPlan') },
         ...(hasCoach && unreadCount > 0
           ? [{ icon: <Inbox className="w-5 h-5 text-amber-400" />, label: '收到的消息', badge: unreadCount > 9 ? '9+' : unreadCount, onClick: () => navigate('/member/messages') }]
@@ -436,29 +430,100 @@ export function MemberProfilePage() {
       {/* 1. 账户设置 */}
       <BottomSheet open={modal === 'settings'} onClose={close} title="账户设置">
         <div className="space-y-4">
+          {/* 头像区域 */}
           <div className="flex flex-col items-center gap-3 py-4">
             <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-400 flex items-center justify-center text-3xl font-bold">
-                {name.charAt(0).toUpperCase()}
+              <div
+                className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-400 flex items-center justify-center text-3xl font-bold overflow-hidden"
+              >
+                {editAvatar ? (
+                  <img src={editAvatar} alt="头像" className="w-full h-full object-cover" />
+                ) : (
+                  editName.charAt(0).toUpperCase()
+                )}
               </div>
-              <button className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center">
+              <button
+                onClick={() => {
+                  const input = document.createElement('input')
+                  input.type = 'file'
+                  input.accept = 'image/*'
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0]
+                    if (file) {
+                      const reader = new FileReader()
+                      reader.onload = () => setEditAvatar(reader.result as string)
+                      reader.readAsDataURL(file)
+                    }
+                  }
+                  input.click()
+                }}
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center hover:bg-emerald-600 transition-colors"
+              >
                 <Camera className="w-4 h-4 text-white" />
               </button>
             </div>
             <p className="text-xs text-gray-500">点击更换头像</p>
           </div>
-          {[
-            { icon: <User className="w-4 h-4 text-gray-400" />, label: '昵称', value: name },
-            { icon: <Phone className="w-4 h-4 text-gray-400" />, label: '手机号', value: '138****8888' },
-          ].map(field => (
-            <div key={field.label} className="flex items-center gap-3 p-4 bg-white/5 rounded-xl">
-              {field.icon}
-              <span className="text-gray-400 text-sm w-16">{field.label}</span>
-              <span className="flex-1 text-right">{field.value}</span>
-              <ChevronRight className="w-4 h-4 text-gray-600" />
-            </div>
-          ))}
-          <button onClick={close} className="w-full mt-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-medium transition-colors">
+
+          {/* 昵称 */}
+          <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl">
+            <User className="w-4 h-4 text-gray-400" />
+            <span className="text-gray-400 text-sm w-16">昵称</span>
+            {editingField === 'name' ? (
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onBlur={() => setEditingField(null)}
+                onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
+                className="flex-1 text-right bg-transparent border-b border-emerald-500 focus:outline-none px-1"
+                autoFocus
+              />
+            ) : (
+              <span
+                className="flex-1 text-right cursor-pointer"
+                onClick={() => setEditingField('name')}
+              >
+                {editName}
+              </span>
+            )}
+            <ChevronRight className="w-4 h-4 text-gray-600" />
+          </div>
+
+          {/* 手机号 */}
+          <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl">
+            <Phone className="w-4 h-4 text-gray-400" />
+            <span className="text-gray-400 text-sm w-16">手机号</span>
+            {editingField === 'phone' ? (
+              <input
+                type="tel"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                onBlur={() => setEditingField(null)}
+                onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
+                className="flex-1 text-right bg-transparent border-b border-emerald-500 focus:outline-none px-1"
+                autoFocus
+                placeholder="输入手机号"
+              />
+            ) : (
+              <span
+                className="flex-1 text-right cursor-pointer"
+                onClick={() => setEditingField('phone')}
+              >
+                {editPhone || '未设置'}
+              </span>
+            )}
+            <ChevronRight className="w-4 h-4 text-gray-600" />
+          </div>
+
+          <button
+            onClick={() => {
+              setProfile({ name: editName, phone: editPhone, avatar: editAvatar })
+              setEditingField(null)
+              close()
+            }}
+            className="w-full mt-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-medium transition-colors"
+          >
             保存修改
           </button>
         </div>
@@ -487,9 +552,9 @@ export function MemberProfilePage() {
           </div>
           <div className="grid grid-cols-3 gap-3 text-center">
             {[
-              { label: '服务会员', value: '48人' },
-              { label: '好评率', value: '98%' },
-              { label: '执教年限', value: '6年' },
+              { label: '服务会员', value: (currentCoach as any)?.memberCount ? `${(currentCoach as any).memberCount}人` : '--' },
+              { label: '好评率', value: currentCoach?.rating ? `${(currentCoach.rating * 20).toFixed(0)}%` : '--' },
+              { label: '评分', value: currentCoach?.rating ? String(currentCoach.rating) : '--' },
             ].map(stat => (
               <div key={stat.label} className="bg-white/5 rounded-xl p-3">
                 <p className="text-lg font-bold text-emerald-400">{stat.value}</p>
@@ -499,7 +564,7 @@ export function MemberProfilePage() {
           </div>
           <div className="bg-white/5 rounded-xl p-4">
             <p className="text-sm text-gray-400 leading-relaxed">
-              专注减脂增肌领域，擅长科学饮食规划配合系统训练，帮助超过 48 位会员达成体型目标。曾获深圳市健身教练职业技能大赛第一名。
+              {currentCoach?.tags?.join('、') ? `擅长${currentCoach.tags.join('、')}，为您提供专业指导。` : '专业健身教练，为您提供科学的训练和饮食指导。'}
             </p>
           </div>
           <button onClick={() => { close(); open('chat') }} className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-medium transition-colors">
@@ -529,7 +594,10 @@ export function MemberProfilePage() {
               className="flex-1 bg-white/10 rounded-xl px-4 py-3 text-sm placeholder-gray-500 outline-none focus:ring-1 focus:ring-emerald-500"
               placeholder="输入消息..."
             />
-            <button className="px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors">
+            <button
+              onClick={() => alert('消息已发送给' + (currentCoach?.name || '教练') + '，请耐心等待回复～')}
+              className="px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors"
+            >
               发送
             </button>
           </div>
@@ -593,64 +661,55 @@ export function MemberProfilePage() {
       {/* 6. 我的方案 */}
       <BottomSheet open={modal === 'myPlan'} onClose={close} title="我的方案">
         <div className="space-y-4">
-          <div className="bg-white/5 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="font-semibold">减脂计划</p>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">进行中</span>
-            </div>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div className="bg-black/20 rounded-lg p-3 text-center">
-                <p className="text-lg font-bold text-emerald-400">{goal.targetWeight}kg</p>
-                <p className="text-xs text-gray-500">目标体重</p>
-              </div>
-              <div className="bg-black/20 rounded-lg p-3 text-center">
-                <p className="text-lg font-bold text-blue-400">{goal.targetBodyFat}%</p>
-                <p className="text-xs text-gray-500">目标体脂</p>
-              </div>
-            </div>
-            <div className="flex justify-between text-xs text-gray-400">
-              <span>目标日期：{goal.targetDate}</span>
-            </div>
-          </div>
-          <div className="bg-white/5 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Dumbbell className="w-5 h-5 text-blue-400" />
-              <p className="font-medium">本周训练安排</p>
-            </div>
-            <div className="space-y-2">
-              {[
-                { day: '周一', plan: '上肢力量 · 45min', done: true },
-                { day: '周三', plan: 'HIIT 有氧 · 30min', done: true },
-                { day: '周五', plan: '下肢力量 · 45min', done: false },
-                { day: '周六', plan: '低强度有氧 · 60min', done: false },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <span className="text-xs text-gray-500 w-8">{item.day}</span>
-                  <div className={`w-2 h-2 rounded-full ${item.done ? 'bg-emerald-400' : 'bg-gray-600'}`} />
-                  <span className={`text-sm flex-1 ${item.done ? 'text-gray-400 line-through' : 'text-gray-300'}`}>{item.plan}</span>
-                  {item.done && <Check className="w-4 h-4 text-emerald-400" />}
+          {(() => {
+            const pt = usePlanTarget()
+            const targetKcal = pt?.targetCalories || 1800
+            const targetPro = pt?.targetProtein || 120
+            const targetCarb = pt?.targetCarb || 150
+            return (
+              <>
+                <div className="bg-white/5 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="font-semibold">
+                      {targetKcal <= 1600 ? '减脂' : targetKcal >= 2200 ? '增肌' : '维持'}计划
+                    </p>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">进行中</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="bg-black/20 rounded-lg p-3 text-center">
+                      <p className="text-lg font-bold text-emerald-400">{goal.targetWeight}kg</p>
+                      <p className="text-xs text-gray-500">目标体重</p>
+                    </div>
+                    <div className="bg-black/20 rounded-lg p-3 text-center">
+                      <p className="text-lg font-bold text-blue-400">{goal.targetBodyFat}%</p>
+                      <p className="text-xs text-gray-500">目标体脂</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-400">
+                    <span>目标日期：{goal.targetDate}</span>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-          <div className="bg-white/5 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Salad className="w-5 h-5 text-emerald-400" />
-              <p className="font-medium">饮食控制目标</p>
-            </div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              {[
-                { label: '热量', value: '1800', unit: 'kcal' },
-                { label: '蛋白质', value: '130', unit: 'g' },
-                { label: '碳水', value: '180', unit: 'g' },
-              ].map(macro => (
-                <div key={macro.label} className="bg-black/20 rounded-xl p-3">
-                  <p className="text-lg font-bold text-emerald-400">{macro.value}</p>
-                  <p className="text-xs text-gray-500">{macro.unit} / {macro.label}</p>
+                <div className="bg-white/5 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Salad className="w-5 h-5 text-emerald-400" />
+                    <p className="font-medium">每日饮食目标</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    {[
+                      { label: '热量', value: String(targetKcal), unit: 'kcal' },
+                      { label: '蛋白质', value: String(targetPro), unit: 'g' },
+                      { label: '碳水', value: String(targetCarb), unit: 'g' },
+                    ].map(macro => (
+                      <div key={macro.label} className="bg-black/20 rounded-xl p-3">
+                        <p className="text-lg font-bold text-emerald-400">{macro.value}</p>
+                        <p className="text-xs text-gray-500">{macro.unit} / {macro.label}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </>
+            )
+          })()}
         </div>
       </BottomSheet>
 
@@ -658,11 +717,11 @@ export function MemberProfilePage() {
       <BottomSheet open={modal === 'notification'} onClose={close} title="通知设置">
         <div className="space-y-3">
           {(Object.entries(notifToggles) as [keyof typeof notifToggles, boolean][]).map(([key, enabled]) => (
-            <div key={key} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl">
+            <div key={String(key)} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl">
               <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                 {enabled ? <BellRing className="w-5 h-5 text-emerald-400" /> : <BellOff className="w-5 h-5 text-gray-500" />}
               </div>
-              <span className="flex-1 font-medium">{key}</span>
+              <span className="flex-1 font-medium">{String(key)}</span>
               <button
                 onClick={() => toggleNotif(key)}
                 className={`relative w-12 h-6 rounded-full transition-colors ${enabled ? 'bg-emerald-500' : 'bg-white/20'}`}
@@ -678,9 +737,9 @@ export function MemberProfilePage() {
       <BottomSheet open={modal === 'feedback'} onClose={close} title="帮助与反馈">
         <div className="space-y-3">
           {[
-            { icon: <HelpCircle className="w-5 h-5 text-cyan-400" />, label: '常见问题' },
-            { icon: <MessageSquare className="w-5 h-5 text-emerald-400" />, label: '提交反馈' },
-            { icon: <Star className="w-5 h-5 text-amber-400" />, label: '给我们评分' },
+            { icon: <HelpCircle className="w-5 h-5 text-cyan-400" />, label: '常见问题', onClick: () => alert('Q：如何绑定教练？\nA：在"我的"页面点击"立即绑定"选择教练即可\n\nQ：如何记录饮食？\nA：首页点击"拍照识别"或进入"饮食记录"手动添加') },
+            { icon: <MessageSquare className="w-5 h-5 text-emerald-400" />, label: '提交反馈', onClick: () => alert('感谢您的反馈！我们会尽快处理。您也可以直接联系教练反馈问题。') },
+            { icon: <Star className="w-5 h-5 text-amber-400" />, label: '给我们评分', onClick: () => alert('如果您觉得 Equilibrio 对您有帮助，请告诉身边的朋友～感谢支持！❤️') },
           ].map(item => (
             <button key={item.label} className="w-full p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left flex items-center justify-between">
               <div className="flex items-center gap-3">

@@ -93,7 +93,9 @@ export const useMealStore = create<MealState>()(
           }
         } catch (err) {
           console.warn('[MealStore] API拉取失败，保持本地数据:', err)
-          set({ error: '拉取失败，使用本地数据' })
+          const msg = (err as Error).message || '操作失败'
+          set({ error: msg })
+          setTimeout(() => set((s) => s.error === msg ? { error: null } : {}), 3000)
         } finally {
           set({ isLoading: false })
         }
@@ -192,6 +194,39 @@ export function useTodayMealsByType() {
     dinner: todayMeals.filter((m) => m.meal_type === 'dinner'),
     snack: todayMeals.filter((m) => m.meal_type === 'snack'),
   }
+}
+
+/**
+ * 计算今日蛋白质摄入总量
+ */
+export function useTodayProtein() {
+  const meals = useMealStore((state) => state.meals)
+  const today = new Date().toDateString()
+  return meals
+    .filter((m) => new Date(m.meal_date).toDateString() === today)
+    .reduce((sum, m) => sum + (m.total_protein || 0), 0)
+}
+
+/**
+ * 计算今日脂肪摄入总量
+ */
+export function useTodayFat() {
+  const meals = useMealStore((state) => state.meals)
+  const today = new Date().toDateString()
+  return meals
+    .filter((m) => new Date(m.meal_date).toDateString() === today)
+    .reduce((sum, m) => sum + (m.total_fat || 0), 0)
+}
+
+/**
+ * 计算今日碳水摄入总量
+ */
+export function useTodayCarbs() {
+  const meals = useMealStore((state) => state.meals)
+  const today = new Date().toDateString()
+  return meals
+    .filter((m) => new Date(m.meal_date).toDateString() === today)
+    .reduce((sum, m) => sum + (m.total_carbs || 0), 0)
 }
 
 /**

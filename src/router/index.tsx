@@ -1,8 +1,9 @@
 /**
  * 路由入口
+ * 使用 HashRouter 以兼容 COS 静态托管（无需服务端 SPA 回退）
  */
 
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileLayout } from '@/components/layout/MobileLayout'
 import { routes, ROUTES } from './routes'
@@ -27,7 +28,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 // 路由组件
 export function Router() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         {/* 登录页 - 无底部导航 */}
         <Route
@@ -56,6 +57,6 @@ export function Router() {
         <Route path="/" element={<Navigate to={ROUTES.MEMBER_HOME} replace />} />
         <Route path="*" element={<Navigate to={ROUTES.MEMBER_HOME} replace />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   )
 }

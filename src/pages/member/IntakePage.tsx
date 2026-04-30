@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Camera, ChevronDown, ChevronUp, Plus, X, Search, Filter, Sunrise, Sun, Moon, Apple } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { foodDatabase, foodCategories, nutritionTags, getFoodTagLabels, type FoodItem, type NutritionTag } from '@/data/foods'
+import { useAuth } from '@/contexts/AuthContext'
 import { useMealStore, useTodayCalories } from '@/stores/mealStore'
 import type { IFoodItem } from '@/cloudbase/types'
 
@@ -39,6 +40,10 @@ interface MealData {
 export function IntakePage() {
   const navigate = useNavigate()
 
+  // ── 当前登录用户 ──
+  const { user } = useAuth()
+  const currentUserId = user?.id || (localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!).id : 'local-user')
+
   // ── Store 数据 ──
   const storeMeals = useMealStore((s) => s.meals)
   const fetchMeals = useMealStore((s) => s.fetchMeals)
@@ -50,8 +55,11 @@ export function IntakePage() {
   // ── 挂载时从 API / localStorage 拉取数据 ──
   useEffect(() => { fetchMeals() }, [])
 
-  // 目标热量（可后续改为用户设置）
-  const targetCalories = 2000
+  // 目标热量（从计划目标读取，默认2000）
+  const [targetCalories] = useState(() => {
+    const saved = localStorage.getItem('plan_target')
+    return saved ? (JSON.parse(saved)).targetCalories || 2000 : 2000
+  })
 
   // ── UI 状态 ──
   const [expandedMeals, setExpandedMeals] = useState<Set<string>>(new Set(['breakfast']))
@@ -87,7 +95,7 @@ export function IntakePage() {
         foods: (sm.foods || []).map((f: IFoodItem, fi: number) => ({
           id: `${sm._id}-food-${fi}`,
           name: f.name,
-          emoji: '🍽️',
+          emoji: (f as any).emoji || '🍽️',
           calories: f.calories,
           protein: f.protein,
           fat: f.fat,
@@ -291,7 +299,7 @@ export function IntakePage() {
 
     // 每次添加都创建独立的一条记录，不覆盖已有记录
     addMeal({
-      user_id: 'local-user',
+      user_id: currentUserId,
       meal_type: selectedMealId as any,
       meal_date: new Date(),
       foods: newFoodItems,
@@ -472,13 +480,9 @@ export function IntakePage() {
                     onClick={() => setSelectedMealId(type)}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                       selectedMealId === type
-                        ? `${mealTypeMap[type].color} bg-opacity-20 ring-2 ring-current`
+                        ? `${mealTypeMap[type].color} ${mealTypeMap[type].bgColor} ring-2 ring-current`
                         : 'bg-white/10 text-gray-300 hover:bg-white/20'
                     }`}
-                    style={selectedMealId === type ? { 
-                      backgroundColor: `${mealTypeMap[type].color.replace('text-', '')}20`,
-                      color: mealTypeMap[type].color.replace('text-', '')
-                    } : {}}
                   >
                     {mealTypeMap[type].icon} {mealTypeMap[type].name}
                   </button>

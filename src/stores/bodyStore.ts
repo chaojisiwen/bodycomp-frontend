@@ -24,7 +24,7 @@ interface BodyState {
 
   // 操作
   fetchRecords: () => Promise<void>
-  addRecord: (record: IBodyRecord) => Promise<void>
+  addRecord: (record: Partial<IBodyRecord>) => Promise<void>
   updateRecord: (id: string, data: Partial<IBodyRecord>) => Promise<void>
   deleteRecord: (id: string) => Promise<void>
   setLoading: (loading: boolean) => void
@@ -33,7 +33,7 @@ interface BodyState {
 }
 
 // 同步新增到后端（失败静默）
-async function syncAddToApi(record: IBodyRecord) {
+async function syncAddToApi(record: Partial<IBodyRecord>) {
   try {
     const { _id, ...rest } = record
     await apiCreateBodyRecord(rest)
@@ -71,7 +71,7 @@ export const useBodyStore = create<BodyState>()(
               const apiIds = new Set(data.map((r) => r._id))
               const localOnly = state.records.filter((r) => !r._id || !apiIds.has(r._id))
               const merged = [...localOnly, ...data].sort(
-                (a, b) => new Date(b.record_date).getTime() - new Date(a.record_date).getTime()
+                (a, b) => new Date(b.record_date!).getTime() - new Date(a.record_date!).getTime()
               )
               return { records: merged, lastSyncedAt: Date.now() }
             })
@@ -81,20 +81,22 @@ export const useBodyStore = create<BodyState>()(
           }
         } catch (err) {
           console.warn('[BodyStore] API拉取失败，保持本地数据:', err)
-          set({ error: '拉取失败，使用本地数据' })
+          const msg = (err as Error).message || '操作失败'
+          set({ error: msg })
+          setTimeout(() => set((s) => s.error === msg ? { error: null } : {}), 3000)
         } finally {
           set({ isLoading: false })
         }
       },
 
       // 添加体成分记录（先本地，后台同步API）
-      addRecord: async (record) => {
+      addRecord: async (record: Partial<IBodyRecord>) => {
         const tempId = `local_${Date.now()}`
-        const localRecord: IBodyRecord = { ...record, _id: tempId }
+        const localRecord: IBodyRecord = { ...record, _id: tempId, record_date: record.record_date ?? new Date(), user_id: record.user_id ?? 'local-user' }
 
         set((state) => ({
           records: [localRecord, ...state.records].sort(
-            (a, b) => new Date(b.record_date).getTime() - new Date(a.record_date).getTime()
+            (a, b) => new Date(b.record_date!).getTime() - new Date(a.record_date!).getTime()
           ),
         }))
 
@@ -162,8 +164,8 @@ export function useBodyTrend(days: number = 30) {
   const cutoff = now - days * 24 * 60 * 60 * 1000
 
   return records
-    .filter((r) => new Date(r.record_date).getTime() > cutoff)
+    .filter((r) => new Date(r.record_date!).getTime() > cutoff)
     .sort((a, b) =>
-      new Date(a.record_date).getTime() - new Date(b.record_date).getTime()
+      new Date(a.record_date!).getTime() - new Date(b.record_date!).getTime()
     )
 }

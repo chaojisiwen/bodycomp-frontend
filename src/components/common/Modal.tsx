@@ -78,11 +78,22 @@ export function Modal({
 interface DrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  title?: string
   children: React.ReactNode
   className?: string
+  showClose?: boolean
+  showHandle?: boolean  // 是否显示拖动条，默认 true
 }
 
-export function Drawer({ open, onOpenChange, children, className }: DrawerProps) {
+export function Drawer({
+  open,
+  onOpenChange,
+  title,
+  children,
+  className,
+  showClose = false,
+  showHandle = true,
+}: DrawerProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -97,10 +108,28 @@ export function Drawer({ open, onOpenChange, children, className }: DrawerProps)
           )}
         >
           {/* 拖动条 */}
-          <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mt-3 mb-2" />
+          {showHandle && (
+            <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mt-3 mb-2" />
+          )}
+
+          {/* Header */}
+          {(title || showClose) && (
+            <div className={cn('flex items-center justify-between px-5', showHandle ? '' : 'mt-3')}>
+              {title && (
+                <Dialog.Title className="text-lg font-semibold text-white">
+                  {title}
+                </Dialog.Title>
+              )}
+              {showClose && (
+                <Dialog.Close className="ml-auto p-2 rounded-lg hover:bg-slate-800 transition-colors">
+                  <X className="w-5 h-5 text-slate-400" />
+                </Dialog.Close>
+              )}
+            </div>
+          )}
 
           {/* Content */}
-          <div className="p-5 pb-36">{children}</div>
+          <div className="p-5 pb-[calc(36px+env(safe-area-inset-bottom,16px))]">{children}</div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

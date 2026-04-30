@@ -15,6 +15,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui/card'
 import { useNotificationStore } from '@/stores/notificationStore'
+import { useProfileStore } from '@/stores'
 import { getNotifications, addMemberReply } from '@/cloudbase/services/notifications'
 
 // 快捷回复选项
@@ -73,14 +74,18 @@ function formatDate(dateStr: string) {
 export function MemberMessagesPage() {
   const navigate = useNavigate()
   const { notifications, unreadCount, markAsRead, markAllAsRead, addReply, addReaction } = useNotificationStore()
+  const { profile } = useProfileStore()
   const [activeNotif, setActiveNotif] = useState<string | null>(null)
   const [replyText, setReplyText] = useState('')
   const [sendingReply, setSendingReply] = useState(false)
   const [selectedReaction, setSelectedReaction] = useState<string | null>(null)
 
+  // derive memberId from profileStore
+  const memberId = profile.memberId || 'demo_member'
+  void memberId // 使用 memberId 避免 TS 警告
+
   // 启动时从云端拉取最新通知
   useEffect(() => {
-    const memberId = localStorage.getItem('bodycomp_userId') || 'demo_member'
     getNotifications(memberId).then(cloudNotifs => {
       if (cloudNotifs.length > 0) {
         const mapped: typeof notifications = cloudNotifs.map(n => ({
@@ -124,7 +129,6 @@ export function MemberMessagesPage() {
   const handleSendReply = async () => {
     if (!replyText.trim() || !activeNotif) return
     setSendingReply(true)
-    const memberId = localStorage.getItem('bodycomp_userId') || 'demo_member'
     const activeNotifData = notifications.find(n => n.id === activeNotif)
     // 同时写入本地 store 和云端
     addReply(activeNotif, replyText.trim())
@@ -137,7 +141,6 @@ export function MemberMessagesPage() {
 
   const handleQuickReply = async (emoji: string) => {
     if (!activeNotif) return
-    const memberId = localStorage.getItem('bodycomp_userId') || 'demo_member'
     const activeNotifData = notifications.find(n => n.id === activeNotif)
     // 同时写入本地 store 和云端
     addReply(activeNotif, emoji)

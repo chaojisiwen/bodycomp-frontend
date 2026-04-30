@@ -32,5 +32,24 @@ export default defineConfig({
     commonjsOptions: {
       include: [/node_modules/],
     },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': [
+            '@radix-ui/react-avatar',
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-progress',
+            '@radix-ui/react-slot',
+          ],
+          'vendor-icons': ['lucide-react', 'react-icons'],
+          'vendor-state': ['zustand'],
+          'vendor-cloud': ['@cloudbase/js-sdk'],
+          'vendor-heic': ['heic2any', 'libheif-js'],
+        },
+      },
+    },
   },
 })

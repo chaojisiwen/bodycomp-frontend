@@ -4,6 +4,8 @@ import { Card } from '@/components/ui/card'
 import { useBodyStore, useLatestBodyRecord, useBodyTrend } from '@/stores/bodyStore'
 import { TrendChart } from '@/components/ui/TrendChart'
 import { recognizeBodyComposition } from '@/cloudbase/services/recognizeApi'
+import { useToast } from '@/components/common'
+import { CardSkeleton } from '@/components/common/Loading'
 
 interface BodyMetric {
   id: string
@@ -17,23 +19,23 @@ interface BodyMetric {
   isCore?: boolean
 }
 
-// 完整的身体指标数据
+// 完整的身体指标数据（trend/change 会在组件内根据真实数据动态重算）
 const allBodyMetrics: BodyMetric[] = [
   // 核心指标（默认显示）
-  { id: 'weight', name: '体重', value: 72.5, unit: 'kg', normal: '65-75kg', trend: 'down', change: -1.2, icon: <Scale className="w-5 h-5" />, isCore: true },
-  { id: 'bmi', name: 'BMI', value: 22.4, unit: '', normal: '18.5-24', trend: 'down', change: -0.4, icon: <User className="w-5 h-5" />, isCore: true },
-  { id: 'fat', name: '体脂率', value: 18.5, unit: '%', normal: '15-20%', trend: 'down', change: -0.8, icon: <Flame className="w-5 h-5" />, isCore: true },
-  { id: 'muscle', name: '肌肉量', value: 58.2, unit: 'kg', normal: '55-65kg', trend: 'up', change: 0.5, icon: <TrendingUp className="w-5 h-5" />, isCore: true },
+  { id: 'weight', name: '体重', value: 0, unit: 'kg', normal: '65-75kg', trend: 'stable', change: 0, icon: <Scale className="w-5 h-5" />, isCore: true },
+  { id: 'bmi', name: 'BMI', value: 0, unit: '', normal: '18.5-24', trend: 'stable', change: 0, icon: <User className="w-5 h-5" />, isCore: true },
+  { id: 'fat', name: '体脂率', value: 0, unit: '%', normal: '15-20%', trend: 'stable', change: 0, icon: <Flame className="w-5 h-5" />, isCore: true },
+  { id: 'muscle', name: '肌肉量', value: 0, unit: 'kg', normal: '55-65kg', trend: 'stable', change: 0, icon: <TrendingUp className="w-5 h-5" />, isCore: true },
   // 详细指标
-  { id: 'waist', name: '腰围', value: 82, unit: 'cm', normal: '<90cm', trend: 'down', change: -2, icon: <TrendingDown className="w-5 h-5" /> },
-  { id: 'visceral', name: '内脏脂肪', value: 8, unit: '', normal: '1-9', trend: 'down', change: -1, icon: <Heart className="w-5 h-5" /> },
-  { id: 'water', name: '体水分', value: 55.2, unit: '%', normal: '50-60%', trend: 'stable', change: 0.3, icon: <Droplets className="w-5 h-5" /> },
-  { id: 'bone', name: '骨量', value: 2.8, unit: 'kg', normal: '2.5-3.5', trend: 'stable', change: 0, icon: <Bone className="w-5 h-5" /> },
-  { id: 'metabolism', name: '基础代谢', value: 1680, unit: 'kcal', normal: '1600-1800', trend: 'stable', change: 0, icon: <Flame className="w-5 h-5" /> },
-  { id: 'protein', name: '蛋白质', value: 17.2, unit: '%', normal: '16-20%', trend: 'up', change: 0.3, icon: <Brain className="w-5 h-5" /> },
-  { id: 'bodyage', name: '身体年龄', value: 28, unit: '岁', normal: '<实际年龄', trend: 'down', change: -2, icon: <User className="w-5 h-5" /> },
-  { id: 'subfat', name: '皮下脂肪', value: 12.5, unit: '%', normal: '9-18%', trend: 'down', change: -0.5, icon: <Flame className="w-5 h-5" /> },
-  { id: 'fatfree', name: '去脂体重', value: 54.2, unit: 'kg', normal: '50-60kg', trend: 'up', change: 0.3, icon: <TrendingUp className="w-5 h-5" /> },
+  { id: 'waist', name: '腰围', value: 0, unit: 'cm', normal: '<90cm', trend: 'stable', change: 0, icon: <TrendingDown className="w-5 h-5" /> },
+  { id: 'visceral', name: '内脏脂肪', value: 0, unit: '', normal: '1-9', trend: 'stable', change: 0, icon: <Heart className="w-5 h-5" /> },
+  { id: 'water', name: '体水分', value: 0, unit: '%', normal: '50-60%', trend: 'stable', change: 0, icon: <Droplets className="w-5 h-5" /> },
+  { id: 'bone', name: '骨量', value: 0, unit: 'kg', normal: '2.5-3.5', trend: 'stable', change: 0, icon: <Bone className="w-5 h-5" /> },
+  { id: 'metabolism', name: '基础代谢', value: 0, unit: 'kcal', normal: '1600-1800', trend: 'stable', change: 0, icon: <Flame className="w-5 h-5" /> },
+  { id: 'protein', name: '蛋白质', value: 0, unit: '%', normal: '16-20%', trend: 'stable', change: 0, icon: <Brain className="w-5 h-5" /> },
+  { id: 'bodyage', name: '身体年龄', value: 0, unit: '岁', normal: '<实际年龄', trend: 'stable', change: 0, icon: <User className="w-5 h-5" /> },
+  { id: 'subfat', name: '皮下脂肪', value: 0, unit: '%', normal: '9-18%', trend: 'stable', change: 0, icon: <Flame className="w-5 h-5" /> },
+  { id: 'fatfree', name: '去脂体重', value: 0, unit: 'kg', normal: '50-60kg', trend: 'stable', change: 0, icon: <TrendingUp className="w-5 h-5" /> },
 ]
 
 // 手动添加的记录 - 与身体指标一致
@@ -62,8 +64,10 @@ export function MyBodyDataPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisResult, setAnalysisResult] = useState<Partial<BodyRecord> | null>(null)
-  const [selectedTrendMetrics, setSelectedTrendMetrics] = useState<('weight' | 'bodyFat' | 'muscle')[]>(['weight', 'bodyFat'])
+  type TrendMetric = 'weight' | 'bodyFat' | 'muscle' | 'bmi' | 'waist' | 'visceral' | 'water' | 'bone' | 'metabolism'
+  const [selectedTrendMetrics, setSelectedTrendMetrics] = useState<TrendMetric[]>(['weight', 'bodyFat'])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const toast = useToast()
 
   const [manualRecord, setManualRecord] = useState({
     weight: '',
@@ -83,6 +87,8 @@ export function MyBodyDataPage() {
 
   // ── Store 数据 ──
   const storeRecords = useBodyStore((s) => s.records)
+  const isLoading = useBodyStore((s) => s.isLoading)
+  const storeError = useBodyStore((s) => s.error)
   const fetchRecords = useBodyStore((s) => s.fetchRecords)
   const addRecord = useBodyStore((s) => s.addRecord)
   const latestBody = useLatestBodyRecord()
@@ -90,6 +96,13 @@ export function MyBodyDataPage() {
 
   // ── 挂载时从 API / localStorage 拉取数据 ──
   useEffect(() => { fetchRecords() }, [])
+
+  // ── Store 错误时 Toast 提示 ──
+  useEffect(() => {
+    if (storeError) {
+      toast.error(storeError)
+    }
+  }, [storeError])
 
   // ── 辅助：字段映射 (UI id → store field) ──
   const fieldMap: Record<string, string> = {
@@ -99,14 +112,14 @@ export function MyBodyDataPage() {
     visceral: 'visceral_fat', water: 'water_content',
     bone: 'bone_mass', metabolism: 'basal_metabolism',
     bodyage: 'metabolism_age',
-    protein: 'protein', subfat: 'subfat', fatfree: 'fatfree',
+    protein: 'protein_percent', subfat: 'subcutaneous_fat', fatfree: 'fat_free_mass',
   }
 
   // 从 store 或默认配置获取最新指标值（取1位小数，避免溢出）
   const getLatestMetricValue = (metricId: string): number => {
     if (latestBody) {
       const storeField = fieldMap[metricId] || metricId
-      const raw = (latestBody as any)[storeField]
+      const raw = (latestBody as Record<string, number | undefined>)[storeField]
       if (raw != null) return Math.round(raw * 10) / 10
     }
     return allBodyMetrics.find(m => m.id === metricId)?.value || 0
@@ -117,7 +130,7 @@ export function MyBodyDataPage() {
     .slice(0, 20)
     .map((r, i) => ({
       id: r._id || `store-${i}`,
-      date: new Date(r.record_date).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
+      date: new Date(r.record_date!).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
       weight: Math.round((r.weight ?? 0) * 10) / 10,
       bmi: Math.round((r.bmi ?? 0) * 10) / 10,
       fat: Math.round((r.body_fat ?? 0) * 10) / 10,
@@ -127,18 +140,32 @@ export function MyBodyDataPage() {
       water: Math.round((r.water_content ?? 0) * 10) / 10,
       bone: Math.round((r.bone_mass ?? 0) * 10) / 10,
       metabolism: r.basal_metabolism ?? 0,
-      protein: Math.round(((r as any).protein ?? 0) * 10) / 10,
+      protein: Math.round(((r as Record<string, number | undefined>).protein_percent ?? 0) * 10) / 10,
       bodyage: r.metabolism_age ?? 0,
-      subfat: Math.round(((r as any).subfat ?? 0) * 10) / 10,
-      fatfree: Math.round(((r as any).fatfree ?? 0) * 10) / 10,
+      subfat: Math.round(((r as Record<string, number | undefined>).subcutaneous_fat ?? 0) * 10) / 10,
+      fatfree: Math.round(((r as Record<string, number | undefined>).fat_free_mass ?? 0) * 10) / 10,
     }))
 
-  // 根据展开状态显示指标（使用最新值）
-  const displayedMetrics = showAllMetrics ? allBodyMetrics : allBodyMetrics.filter(m => m.isCore)
+  // 根据展开状态显示指标（使用最新值 + 动态趋势）
+  const displayedMetrics = (showAllMetrics ? allBodyMetrics : allBodyMetrics.filter(m => m.isCore)).map(m => ({
+    ...m,
+    value: getLatestMetricValue(m.id),
+    // 根据最近两条记录动态计算趋势
+    ...(bodyTrend.length >= 2 ? (() => {
+      const latest = bodyTrend[bodyTrend.length - 1]
+      const prev = bodyTrend[bodyTrend.length - 2]
+      const latestVal = (latest as Record<string, number | undefined>)?.[fieldMap[m.id] || m.id]
+      const prevVal = (prev as Record<string, number | undefined>)?.[fieldMap[m.id] || m.id]
+      if (latestVal == null || prevVal == null) return { trend: 'stable' as const, change: 0 }
+      const diff = Math.round((Number(latestVal) - Number(prevVal)) * 10) / 10
+      const tol = Math.abs(diff) < 0.05
+      return { trend: tol ? 'stable' as const : diff > 0 ? 'up' as const : 'down' as const, change: diff }
+    })() : { trend: 'stable' as const, change: 0 })
+  }))
 
   // 趋势图数据（支持多指标）
   const trendChartData = bodyTrend.slice(-14).map(r => ({
-    date: new Date(r.record_date).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
+    date: new Date(r.record_date!).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
     weight: r.weight ?? undefined,
     bodyFat: r.body_fat ?? undefined,
     muscle: r.muscle_mass ?? undefined,
@@ -150,14 +177,14 @@ export function MyBodyDataPage() {
     metabolism: r.basal_metabolism ?? undefined,
   }))
 
-  const toggleTrendMetric = (metric: 'weight' | 'bodyFat' | 'muscle' | 'bmi') => {
-    if (selectedTrendMetrics.includes(metric as any)) {
+  const toggleTrendMetric = (metric: TrendMetric) => {
+    if (selectedTrendMetrics.includes(metric)) {
       if (selectedTrendMetrics.length > 1) {
         setSelectedTrendMetrics(selectedTrendMetrics.filter(m => m !== metric))
       }
     } else {
       if (selectedTrendMetrics.length < 3) {
-        setSelectedTrendMetrics([...selectedTrendMetrics, metric as any])
+        setSelectedTrendMetrics([...selectedTrendMetrics, metric])
       }
     }
   }
@@ -252,11 +279,11 @@ export function MyBodyDataPage() {
         })
       } else {
         console.error('[MyBodyData] AI 识别失败:', result.error)
-        alert(result.error || '识别失败，请重试')
+        toast.error(result.error || '识别失败，请重试')
       }
     } catch (error) {
       console.error('[MyBodyData] 处理图片失败:', error)
-      alert('处理图片失败，请重试')
+      toast.error('处理图片失败，请重试')
     } finally {
       setIsAnalyzing(false)
     }
@@ -280,7 +307,7 @@ export function MyBodyDataPage() {
       setShowCameraView(true)
     } catch (error) {
       console.error('[MyBodyData] 无法访问摄像头:', error)
-      alert('无法访问摄像头，请确保已授权相机权限')
+      toast.error('无法访问摄像头，请确保已授权相机权限')
     }
   }
 
@@ -337,11 +364,11 @@ export function MyBodyDataPage() {
         })
       } else {
         console.error('[MyBodyData] AI 识别失败:', result.error)
-        alert(result.error || '识别失败，请重试')
+        toast.error(result.error || '识别失败，请重试')
       }
     } catch (error) {
       console.error('[MyBodyData] 拍照识别失败:', error)
-      alert('拍照识别失败，请重试')
+      toast.error('拍照识别失败，请重试')
     } finally {
       setIsAnalyzing(false)
     }
@@ -461,7 +488,15 @@ export function MyBodyDataPage() {
         </div>
         
         {/* 指标网格 */}
-        <div className="grid grid-cols-2 gap-3">
+        {isLoading ? (
+          <div className="grid grid-cols-2 gap-3">
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
           {displayedMetrics.map((metric) => (
             <Card 
               key={metric.id} 
@@ -488,7 +523,8 @@ export function MyBodyDataPage() {
               </div>
             </Card>
           ))}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* 趋势图表区域 - 多指标对比 */}
@@ -530,9 +566,9 @@ export function MyBodyDataPage() {
           ] as const).map(metric => (
             <button
               key={metric.id}
-              onClick={() => toggleTrendMetric(metric.id as any)}
+              onClick={() => toggleTrendMetric(metric.id as TrendMetric)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                selectedTrendMetrics.includes(metric.id as any)
+                selectedTrendMetrics.includes(metric.id as TrendMetric)
                   ? 'bg-emerald-500/30 text-emerald-400 border border-emerald-500/50'
                   : 'bg-white/5 text-gray-400 border border-transparent hover:bg-white/10'
               }`}
@@ -564,7 +600,7 @@ export function MyBodyDataPage() {
             <p className="font-semibold">
               {bodyTrend.length > 0 && selectedTrendMetrics.length > 0
                 ? (() => {
-                    const val = (bodyTrend[0] as any)?.[getMetricField(selectedTrendMetrics[0])]
+                    const val = (bodyTrend[0] as Record<string, number | undefined>)?.[getMetricField(selectedTrendMetrics[0])]
                     const unit = getMetricUnit(selectedTrendMetrics[0])
                     return val != null ? `${Math.round(val * 10) / 10}${unit}` : '--'
                   })()
@@ -577,7 +613,7 @@ export function MyBodyDataPage() {
             <p className="font-semibold text-emerald-400">
               {selectedTrendMetrics.length > 0
                 ? (() => {
-                    const val = (latestBody as any)?.[getMetricField(selectedTrendMetrics[0])]
+                    const val = (latestBody as Record<string, number | undefined>)?.[getMetricField(selectedTrendMetrics[0])]
                     const unit = getMetricUnit(selectedTrendMetrics[0])
                     return val != null ? `${Math.round(val * 10) / 10}${unit}` : '--'
                   })()
@@ -590,8 +626,8 @@ export function MyBodyDataPage() {
             <p className="font-semibold text-emerald-400">
               {bodyTrend.length > 0 && selectedTrendMetrics.length > 0 && latestBody
                 ? (() => {
-                    const current = (latestBody as any)?.[getMetricField(selectedTrendMetrics[0])] ?? 0
-                    const start = (bodyTrend[0] as any)?.[getMetricField(selectedTrendMetrics[0])] ?? 0
+                    const current = (latestBody as Record<string, number | undefined>)?.[getMetricField(selectedTrendMetrics[0])] ?? 0
+                    const start = (bodyTrend[0] as Record<string, number | undefined>)?.[getMetricField(selectedTrendMetrics[0])] ?? 0
                     const diff = current - start
                     const unit = getMetricUnit(selectedTrendMetrics[0])
                     return `${diff > 0 ? '+' : ''}${Math.round(diff * 10) / 10}${unit}`

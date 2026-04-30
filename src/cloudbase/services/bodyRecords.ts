@@ -59,7 +59,7 @@ export async function getBodyRecord(id: string): Promise<IBodyRecord | null> {
  * 创建体成分记录
  */
 export async function createBodyRecord(
-  data: IBodyRecordInput
+  data: Partial<IBodyRecordInput>
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
     const db = getApp()?.database()

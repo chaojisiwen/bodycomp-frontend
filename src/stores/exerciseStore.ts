@@ -85,7 +85,9 @@ export const useExerciseStore = create<ExerciseState>()(
           }
         } catch (err) {
           console.warn('[ExerciseStore] API拉取失败，保持本地数据:', err)
-          set({ error: '拉取失败，使用本地数据' })
+          const msg = (err as Error).message || '操作失败'
+          set({ error: msg })
+          setTimeout(() => set((s) => s.error === msg ? { error: null } : {}), 3000)
         } finally {
           set({ isLoading: false })
         }

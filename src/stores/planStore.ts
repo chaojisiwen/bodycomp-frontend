@@ -82,7 +82,66 @@ const DEFAULT_TRAINING: TrainingItem[] = [
 ]
 
 // ============================================================
-// 状态接口
+// 会员计划目标（用于首页展示和编辑）
+// ============================================================
+
+export interface PlanTarget {
+  startDate: string
+  endDate: string
+  totalDays: number
+  targetCalories: number
+  targetProtein: number
+  targetFat: number
+  targetCarb: number
+}
+
+const DEFAULT_PLAN_TARGET: PlanTarget = {
+  startDate: '2026-03-01',
+  endDate: '2026-05-30',
+  totalDays: 90,
+  targetCalories: 1800,
+  targetProtein: 120,
+  targetFat: 60,
+  targetCarb: 150,
+}
+
+// ============================================================
+// 计划目标独立 Store（zustand persist，存储键 'plan-target'）
+// ============================================================
+
+interface PlanTargetState {
+  planTarget: PlanTarget
+  setPlanTarget: (target: PlanTarget) => void
+}
+
+export const usePlanTargetStore = create<PlanTargetState>()(
+  persist(
+    (set) => ({
+      planTarget: DEFAULT_PLAN_TARGET,
+      setPlanTarget: (planTarget) => set({ planTarget }),
+    }),
+    {
+      name: 'plan-target',
+    }
+  )
+)
+
+/**
+ * 获取会员个人计划目标
+ */
+export function usePlanTarget() {
+  return usePlanTargetStore((state) => state.planTarget)
+}
+
+/**
+ * 获取设置计划目标的方法
+ */
+export function useSetPlanTarget() {
+  return usePlanTargetStore((state) => state.setPlanTarget)
+}
+
+// ============================================================
+// 状态接口（主 Store）
 // ============================================================
 
 interface PlanState {

@@ -34,8 +34,8 @@ export interface IUserProfile extends Omit<IUser, '_id' | 'openid' | 'unionid'> 
 
 export interface IBodyRecord {
   _id?: string
-  user_id: string
-  record_date: Date
+  user_id?: string
+  record_date?: Date
   weight?: number
   bmi?: number
   body_fat?: number
@@ -123,12 +123,15 @@ export type IExerciseInput = Omit<IExercise, '_id' | 'created_at'>
 
 export interface ICoach {
   _id?: string
-  user_id: string
+  user_id?: string
   title?: string
-  specialty?: string
+  specialty?: string | string[]
   bio?: string
+  avatar?: string
+  certifications?: string[]
   rating?: number
   member_count?: number
+  memberCount?: number
   verified?: boolean
   created_at?: Date
 }

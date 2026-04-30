@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { getApp, initCloudbase, callCloudFunction } from '@/cloudbase'
 
 // 本地 mock 模式的邀请码白名单（仅用于本地开发调试）
 const MOCK_VALID_CODES = [
@@ -23,6 +25,7 @@ interface LoginResponse {
 }
 
 export default function LoginPage() {
+  const navigate = useNavigate()
   const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -40,9 +43,11 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const app = (window as any).__TCBA__?.app
+      // 尝试初始化 CloudBase SDK
+      await initCloudbase()
+      const app = getApp()
       if (!app) {
-        // Mock 模式
+        // Mock 模式（CloudBase 未连通时降级）
         const upper = code.trim().toUpperCase()
         if (!MOCK_VALID_CODES.includes(upper)) {
           setError('邀请码无效，请输入正确的邀请码')
@@ -52,8 +57,9 @@ export default function LoginPage() {
         // 检查本地是否已设置过密码
         const storedPw = localStorage.getItem(`pw_${upper}`)
         if (storedPw) {
-          // 已有密码 → 要求输入密码
-          setLoginData({ needPassword: true } as any)
+          // 已有密码 → 要求输入密码（保留角色信息）
+          const mockRole = upper.startsWith('C-') ? 'coach' : 'member'
+          setLoginData({ needPassword: true, role: mockRole } as any)
           setStep('password')
         } else {
           // 无密码记录 → 首次或未设密码
@@ -72,12 +78,10 @@ export default function LoginPage() {
         return
       }
 
-      const res = await app.callFunction({
-        name: 'validateInviteCode',
-        data: { action: 'login', code: code.trim() }
-      }) as { result: LoginResponse }
-
-      const result = res.result
+      const result = await callCloudFunction<LoginResponse>('validateInviteCode', {
+        action: 'login',
+        code: code.trim(),
+      })
 
       // 需要输入密码
       if (result.code === -2) {
@@ -119,27 +123,27 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const app = (window as any).__TCBA__?.app
+      await initCloudbase()
+      const app = getApp()
       if (!app) {
         // Mock 模式：验证本地存储的密码
         const upper = code.trim().toUpperCase()
         const storedPw = localStorage.getItem(`pw_${upper}`)
-        if (storedPw && storedPw !== password.trim()) {
-          setError('密码错误')
+        if (!storedPw || storedPw !== password.trim()) {
+          setError(!storedPw ? '请先设置密码' : '密码错误')
           setLoading(false)
           return
         }
-        // 密码正确（或未设置密码）→ 完成登录
+        // 密码正确 → 完成登录
         await finishLogin(loginData?.role || 'member', loginData || null)
         return
       }
 
-      const res = await app.callFunction({
-        name: 'validateInviteCode',
-        data: { action: 'login', code: code.trim(), password: password.trim() }
-      }) as { result: LoginResponse }
-
-      const result = res.result
+      const result = await callCloudFunction<LoginResponse>('validateInviteCode', {
+        action: 'login',
+        code: code.trim(),
+        password: password.trim(),
+      })
 
       if (result.code !== 0) {
         setError(result.message || '登录失败')
@@ -167,7 +171,8 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const app = (window as any).__TCBA__?.app
+      await initCloudbase()
+      const app = getApp()
       const upper = code.trim().toUpperCase()
 
       if (!app) {
@@ -177,12 +182,11 @@ export default function LoginPage() {
         return
       }
 
-      const res = await app.callFunction({
-        name: 'validateInviteCode',
-        data: { action: 'setPassword', code: upper, password: password.trim() }
-      }) as { result: LoginResponse }
-
-      const result = res.result
+      const result = await callCloudFunction<LoginResponse>('validateInviteCode', {
+        action: 'setPassword',
+        code: upper,
+        password: password.trim(),
+      })
 
       if (result.code !== 0) {
         setError(result.message || '设置失败')
@@ -200,13 +204,8 @@ export default function LoginPage() {
 
   // ── 跳过设置密码 ─────────────────────────────────────────────
   const handleSkipPassword = () => {
-    const upper = code.trim().toUpperCase()
-    // 标记该账号已有密码保护，下次必须输入
-    localStorage.setItem(`pw_${upper}`, '__REQUIRED__')
-    // 跳转到密码输入页，下次必须输密码
-    setPassword('')
-    setError('')
-    setStep('password')
+    // 不设密码 → 直接登录，下次进入也不要求密码
+    finishLogin(loginData?.role || 'member', loginData || null)
   }
 
   // ── 完成登录 ─────────────────────────────────────────────────
@@ -222,9 +221,9 @@ export default function LoginPage() {
     localStorage.setItem('user', JSON.stringify(userData))
 
     if (role === 'coach') {
-      window.location.href = '/#coach/home'
+      navigate('/coach/home')
     } else {
-      window.location.href = '/#member/home'
+      navigate('/member/home')
     }
   }
 

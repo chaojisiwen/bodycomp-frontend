@@ -25,6 +25,7 @@ interface UserGoal {
 
 interface UserProfile {
   name: string
+  phone?: string
   avatar?: string
   memberId: string
   checkInDays: number
@@ -46,6 +47,7 @@ interface ProfileState {
   currentCoach: CoachInfo | null
   hasCoach: boolean
   isLoading: boolean
+  error: string | null
   lastSyncedAt: number | null
 
   // 操作
@@ -60,6 +62,7 @@ interface ProfileState {
 
 const DEFAULT_PROFILE: UserProfile = {
   name: '王先生',
+  phone: '',
   avatar: undefined,
   memberId: 'MB202604001',
   checkInDays: 1,
@@ -77,6 +80,7 @@ export const useProfileStore = create<ProfileState>()(
       currentCoach: null,
       hasCoach: false,
       isLoading: false,
+      error: null,
       lastSyncedAt: null,
 
       // 从 CloudBase 拉取用户信息（API优先，失败回退localStorage）
@@ -89,6 +93,7 @@ export const useProfileStore = create<ProfileState>()(
               profile: {
                 ...state.profile,
                 name: user.nickname || user.phone || state.profile.name,
+                phone: user.phone || state.profile.phone,
                 avatar: user.avatar,
                 memberId: user._id || state.profile.memberId,
               },
@@ -98,9 +103,9 @@ export const useProfileStore = create<ProfileState>()(
           } else {
             set({ isLoading: false })
           }
-        } catch {
+        } catch (err) {
           // API 失败，静默回退 localStorage
-          set({ isLoading: false })
+          set({ isLoading: false, error: '获取用户信息失败' })
         }
       },
 

@@ -57,12 +57,8 @@ export function MyPlansPage() {
   const memberId = user?.id || ''
 
   useEffect(() => {
-    console.log('[MyPlansPage] 当前用户:', user)
-    console.log('[MyPlansPage] 会员ID:', memberId)
     if (memberId) {
       fetchPlans(memberId)
-    } else {
-      console.warn('[MyPlansPage] 用户ID为空，无法获取计划')
     }
   }, [memberId, user?.id])
 
