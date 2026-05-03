@@ -1,8 +1,19 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+// ============================================================
+// ⚠️ 登录核心文件 - 修改需谨慎
+// 本文件属于系统认证链路的关键环节
+// 修改前请确认了解：登录流程、路由守卫、AuthContext 三者关系
+// 关键约束：
+//   - 必须通过 useAuth().login() 写入登录态（禁止直接操作 localStorage）
+//   - 导航路径必须与 router/routes.tsx 中 ROUTES 常量保持一致
+//   - 云函数调用参数必须与 cloudfunctions/validateInviteCode/index.js 匹配
+//   - Mock 降级仅在 DEV 环境生效，生产环境必须走云函数
+// ============================================================
+
+import { useState, useRef, useCallback } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 import { getApp, initCloudbase, callCloudFunction } from '@/cloudbase'
 
-// 本地 mock 模式的邀请码白名单（仅用于本地开发调试）
+// ── Mock 白名单（仅开发环境使用）────────────────────────────
 const MOCK_VALID_CODES = [
   'M-NNC1M0', 'M-3N2000', 'M-YIWWRB', 'M-S89000', 'M-YDA600',
   'M-F00000', 'M-TOD300', 'M-98D700', 'M-WTTJZ0', 'M-SRF150',
@@ -25,7 +36,7 @@ interface LoginResponse {
 }
 
 export default function LoginPage() {
-  const navigate = useNavigate()
+  const { login } = useAuth()
   const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -34,32 +45,13 @@ export default function LoginPage() {
   const [step, setStep] = useState<'code' | 'password' | 'setPassword'>('code')
   const [loginData, setLoginData] = useState<LoginResponse['data'] | null>(null)
 
-  // ── Mock 模式登录（CloudBase 不可用时降级） ──────────────────
-  const mockLogin = async (code: string) => {
-    const upper = code.trim().toUpperCase()
-    if (!MOCK_VALID_CODES.includes(upper)) {
-      setError('邀请码无效，请输入正确的邀请码')
-      return
-    }
-    const mockRole = upper.startsWith('C-') ? 'coach' : 'member'
+  // 表单引用，供重试按钮调用
+  const formRef = useRef<HTMLFormElement>(null)
 
-    // 检查本地是否已设置过密码
-    const storedPw = localStorage.getItem(`pw_${upper}`)
-    if (storedPw) {
-      setLoginData({ needPassword: true, role: mockRole } as any)
-      setStep('password')
-    } else {
-      setLoginData({
-        role: mockRole,
-        uid: `mock-${upper}`,
-        name: mockRole === 'coach' ? '教练' : '会员',
-        userId: `mock-${upper}`,
-        isFirstLogin: true,
-        needSetPassword: false,
-      })
-      setStep('setPassword')
-    }
-  }
+  // ── 工具：判断当前是否使用 Mock 降级 ─────────────────────────
+  const isMockMode = useCallback(() => {
+    return import.meta.env.DEV && !getApp()
+  }, [])
 
   // ── Step 1: 输入邀请码 ───────────────────────────────────────
   const handleCodeSubmit = async (e: React.FormEvent) => {
@@ -70,12 +62,42 @@ export default function LoginPage() {
     setError('')
 
     try {
-      // 尝试初始化 CloudBase SDK
+      // ── Mock 降级：SDK 未初始化时使用本地白名单 ──────────
+      if (isMockMode()) {
+        console.log('[LoginPage] Mock 模式：SDK 未初始化，使用本地白名单')
+        const upper = code.trim().toUpperCase()
+        if (!MOCK_VALID_CODES.includes(upper)) {
+          setError('邀请码无效，请输入正确的邀请码')
+          setLoading(false)
+          return
+        }
+        // 检查本地是否已设置过密码
+        const storedPw = localStorage.getItem(`pw_${upper}`)
+        if (storedPw) {
+          setLoginData({ needPassword: true } as any)
+          setStep('password')
+        } else {
+          const mockRole = upper.startsWith('C-') ? 'coach' : 'member'
+          setLoginData({
+            role: mockRole,
+            uid: `mock-${upper}`,
+            name: mockRole === 'coach' ? '教练' : '会员',
+            userId: `mock-${upper}`,
+            isFirstLogin: true,
+            needSetPassword: false,
+          })
+          setStep('setPassword')
+        }
+        setLoading(false)
+        return
+      }
+
+      // ── 正常路径：SDK 调用云函数 ──────────────────────────
       await initCloudbase()
       const app = getApp()
       if (!app) {
-        // Mock 模式：CloudBase SDK 未初始化（Vercel 海外部署无法访问腾讯云）
-        await mockLogin(code)
+        setError('服务未初始化，请点击下方重试按钮')
+        setLoading(false)
         return
       }
 
@@ -106,12 +128,11 @@ export default function LoginPage() {
         return
       }
 
-      // 登录成功（首次新用户）
-      await finishLogin(result.data?.role || 'member', result.data)
-    } catch {
-      // CloudBase 调用失败（跨海网络问题），降级到 Mock 模式
-      console.warn('[Login] CloudBase 调用失败，降级到 Mock 模式')
-      await mockLogin(code)
+      // 登录成功
+      finishLogin(result.data?.role || 'member', result.data)
+    } catch (err) {
+      console.error('[LoginPage] Step 1 异常:', err)
+      setError('服务暂不可用，请检查网络连接后点击重试')
     } finally {
       setLoading(false)
     }
@@ -126,19 +147,26 @@ export default function LoginPage() {
     setError('')
 
     try {
-      await initCloudbase()
-      const app = getApp()
-      if (!app) {
-        // Mock 模式：验证本地存储的密码
+      // ── Mock 降级：验证本地存储的密码 ────────────────────
+      if (isMockMode()) {
+        console.log('[LoginPage] Mock 密码验证')
         const upper = code.trim().toUpperCase()
         const storedPw = localStorage.getItem(`pw_${upper}`)
-        if (!storedPw || storedPw !== password.trim()) {
-          setError(!storedPw ? '请先设置密码' : '密码错误')
+        if (storedPw && storedPw !== password.trim()) {
+          setError('密码错误')
           setLoading(false)
           return
         }
-        // 密码正确 → 完成登录
-        await finishLogin(loginData?.role || 'member', loginData || null)
+        finishLogin(loginData?.role || 'member', loginData || null)
+        return
+      }
+
+      // ── 正常路径 ─────────────────────────────────────────
+      await initCloudbase()
+      const app = getApp()
+      if (!app) {
+        setError('服务未初始化，请点击重试')
+        setLoading(false)
         return
       }
 
@@ -154,18 +182,10 @@ export default function LoginPage() {
         return
       }
 
-      await finishLogin(result.data?.role || 'member', result.data)
-    } catch {
-      // Mock 模式降级（验证本地密码）
-      console.warn('[Login] password CloudBase 失败，降级到 Mock')
-      const upper = code.trim().toUpperCase()
-      const storedPw = localStorage.getItem(`pw_${upper}`)
-      if (!storedPw || storedPw !== password.trim()) {
-        setError(!storedPw ? '请先设置密码' : '密码错误')
-        setLoading(false)
-        return
-      }
-      await finishLogin(loginData?.role || 'member', loginData || null)
+      finishLogin(result.data?.role || 'member', result.data)
+    } catch (err) {
+      console.error('[LoginPage] Step 2 异常:', err)
+      setError('服务暂不可用，请检查网络连接后点击重试')
     } finally {
       setLoading(false)
     }
@@ -185,13 +205,20 @@ export default function LoginPage() {
     const upper = code.trim().toUpperCase()
 
     try {
+      // ── Mock 降级：存密码到 localStorage ────────────────
+      if (isMockMode()) {
+        console.log('[LoginPage] Mock 设置密码')
+        localStorage.setItem(`pw_${upper}`, password.trim())
+        finishLogin(loginData?.role || 'member', loginData || null)
+        return
+      }
+
+      // ── 正常路径 ─────────────────────────────────────────
       await initCloudbase()
       const app = getApp()
-
       if (!app) {
-        // Mock 模式：存密码到 localStorage
-        localStorage.setItem(`pw_${upper}`, password.trim())
-        await finishLogin(loginData?.role || 'member', loginData || null)
+        setError('服务未初始化，请点击重试')
+        setLoading(false)
         return
       }
 
@@ -207,42 +234,54 @@ export default function LoginPage() {
         return
       }
 
-      await finishLogin(result.data?.role || loginData?.role || 'member', result.data)
-    } catch {
-      // CloudBase 调用失败，降级到 Mock 模式
-      console.warn('[Login] setPassword CloudBase 失败，降级到 Mock')
-      localStorage.setItem(`pw_${upper}`, password.trim())
-      await finishLogin(loginData?.role || 'member', loginData || null)
+      finishLogin(result.data?.role || loginData?.role || 'member', result.data)
+    } catch (err) {
+      console.error('[LoginPage] Step 3 异常:', err)
+      setError('服务暂不可用，请检查网络连接后点击重试')
     } finally {
       setLoading(false)
     }
   }
 
+  // ── 重试按钮 ─────────────────────────────────────────────────
+  const handleRetry = () => {
+    setError('')
+    formRef.current?.requestSubmit()
+  }
+
   // ── 跳过设置密码 ─────────────────────────────────────────────
   const handleSkipPassword = () => {
-    // 不设密码 → 直接登录，下次进入也不要求密码
-    finishLogin(loginData?.role || 'member', loginData || null)
+    const upper = code.trim().toUpperCase()
+    localStorage.setItem(`pw_${upper}`, '__REQUIRED__')
+    setPassword('')
+    setError('')
+    setStep('password')
   }
 
   // ── 完成登录 ─────────────────────────────────────────────────
-  const finishLogin = async (role: string, data: LoginResponse['data'] | null) => {
+  // 注意：必须用 window.location.href 而非 navigate()
+  // 原因：login() 调用 setUser() 是异步的，navigate() 执行时
+  // isAuthenticated 仍为 false，RequireAuth 会拦截跳转踢回 /login
+  // window.location.href 触发全页刷新，AuthProvider 从 localStorage 恢复状态
+  const finishLogin = (role: string, data: LoginResponse['data'] | null) => {
     const userData = {
-      id: data?.uid || data?.userId || `mock-${code}`,
+      id: data?.uid || data?.userId || code.trim().toUpperCase(),
       name: data?.name || '用户',
       phone: '',
-      role,
+      role: role as 'member' | 'coach',
       coachId: '',
     }
 
-    localStorage.setItem('user', JSON.stringify(userData))
+    login(userData)
 
     if (role === 'coach') {
-      navigate('/coach/home')
+      window.location.href = '/#/coach'
     } else {
-      navigate('/member/home')
+      window.location.href = '/#/member'
     }
   }
 
+  // ── 渲染 ─────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -260,7 +299,7 @@ export default function LoginPage() {
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {step === 'code' && (
-            <form onSubmit={handleCodeSubmit} className="space-y-6">
+            <form ref={formRef} onSubmit={handleCodeSubmit} className="space-y-6">
               <div className="text-center mb-4">
                 <h2 className="text-xl font-semibold text-gray-800">欢迎回来</h2>
                 <p className="text-sm text-gray-500 mt-1">输入您的邀请码登录</p>
@@ -279,7 +318,18 @@ export default function LoginPage() {
                 />
               </div>
 
-              {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+              {error && (
+                <div className="text-center">
+                  <p className="text-sm text-red-500">{error}</p>
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    className="text-sm text-emerald-600 font-medium mt-1 hover:text-emerald-700"
+                  >
+                    点击重试
+                  </button>
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -304,7 +354,7 @@ export default function LoginPage() {
           )}
 
           {step === 'password' && (
-            <form onSubmit={handlePasswordSubmit} className="space-y-6">
+            <form ref={formRef} onSubmit={handlePasswordSubmit} className="space-y-6">
               <div className="text-center mb-4">
                 <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -345,7 +395,18 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+              {error && (
+                <div className="text-center">
+                  <p className="text-sm text-red-500">{error}</p>
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    className="text-sm text-emerald-600 font-medium mt-1 hover:text-emerald-700"
+                  >
+                    点击重试
+                  </button>
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -368,7 +429,7 @@ export default function LoginPage() {
           )}
 
           {step === 'setPassword' && (
-            <form onSubmit={handleSetPassword} className="space-y-6">
+            <form ref={formRef} onSubmit={handleSetPassword} className="space-y-6">
               <div className="text-center mb-4">
                 <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -415,7 +476,18 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+              {error && (
+                <div className="text-center">
+                  <p className="text-sm text-red-500">{error}</p>
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    className="text-sm text-emerald-600 font-medium mt-1 hover:text-emerald-700"
+                  >
+                    点击重试
+                  </button>
+                </div>
+              )}
 
               <button
                 type="submit"

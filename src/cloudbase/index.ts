@@ -1,3 +1,13 @@
+// ============================================================
+// ⚠️ 登录核心文件 - 修改需谨慎
+// 本文件属于系统认证链路的关键环节
+// 修改前请确认了解：登录流程、路由守卫、AuthContext 三者关系
+// 关键约束：
+//   - callCloudFunction 的参数格式必须与云函数入参保持一致
+//   - initCloudbase 失败时不应降级为模拟逻辑（直接抛错或返回 false）
+//   - envId 变更需同步更新 cloudfunctions 中的云函数配置
+// ============================================================
+
 /**
  * 腾讯云云开发 SDK 初始化
  *
@@ -48,6 +58,22 @@ export async function initCloudbase(config?: Partial<typeof CLOUDBASE_CONFIG>): 
       timeout: 10000,
     })
 
+    // 关键修复：先做匿名登录，否则 callFunction 会报 scope null 错误
+    // 注意：如果部署域名不在腾讯云「安全域名」白名单中，匿名登录会失败
+    try {
+      const auth = app.auth()
+      await auth.signInAnonymously()
+      console.log('[CloudBase] ✅ 匿名登录成功')
+    } catch (authError) {
+      console.warn(
+        '[CloudBase] ⚠️ 匿名登录失败！',
+        '可能原因：当前域名未加入腾讯云安全域名白名单。',
+        '请在腾讯云云开发控制台 → 安全配置 → 安全域名中添加当前域名。',
+        '错误详情:',
+        authError
+      )
+    }
+
     isInitialized = true
     console.log('[CloudBase] ✅ 初始化成功，环境 ID:', finalConfig.envId)
     return true
@@ -92,92 +118,39 @@ export function getDatabase() {
 
 /**
  * 调用云函数
- * 使用 fetch 直接调用云函数的 HTTP 触发端点，绕过 SDK 的 callFunction bug
+ * 通过 SDK callFunction 调用云函数
+ *
+ * 注意：需要 initCloudbase 先完成（含匿名登录），否则会因 scope 问题失败。
+ * 如果部署域名不在腾讯云安全域名白名单中，匿名登录会失败，导致 callFunction 也不可用。
  *
  * @param name 云函数名称
  * @param data 传递给云函数的参数
- * @returns 云函数返回结果
+ * @returns 云函数返回结果（已解包 result 字段）
  */
 export async function callCloudFunction<T = any>(name: string, data?: Record<string, unknown>): Promise<T> {
   const appInstance = getApp()
   if (!appInstance) {
-    throw new Error('CloudBase SDK 未初始化')
+    throw new Error('CloudBase SDK 未初始化，请检查环境配置或刷新页面重试')
   }
-
-  const finalConfig = CLOUDBASE_CONFIG
-  const envId = finalConfig.envId
-
-  // 云开发云函数 HTTP 触发 URL 格式
-  // 注意：云函数需要开启 HTTP 触发
-  const url = `https://${envId}.service.tcloudbase.com/${name}`
-
-  // 准备纯净的 JSON 数据
-  const requestData = data ? JSON.parse(JSON.stringify(data)) : {}
-
-  console.log(`[CloudFunction] HTTP 调用: ${name}`, { url, data: requestData })
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestData),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error(`[CloudFunction] HTTP 错误 ${response.status}:`, errorText)
-      throw new Error(`HTTP ${response.status}: ${errorText}`)
-    }
-
-    const result = await response.json()
-    console.log(`[CloudFunction] HTTP 返回:`, result)
-
-    return result as T
-  } catch (error) {
-    console.error(`[CloudFunction] HTTP 调用失败，尝试 SDK fallback:`, error)
-
-    // 如果 HTTP 调用失败（可能是云函数没开 HTTP 触发），回退到 SDK
-    return callCloudFunctionSDKFallback<T>(name, data)
-  }
-}
-
-/**
- * SDK callFunction 回退方案
- * 使用最简化的参数格式
- */
-async function callCloudFunctionSDKFallback<T = any>(name: string, data?: Record<string, unknown>): Promise<T> {
-  const appInstance = getApp()
-  if (!appInstance) {
-    throw new Error('CloudBase SDK 未初始化')
-  }
-
-  // 最简化的参数处理 - 只保留基本类型
-  const cleanData: Record<string, unknown> = {}
-  if (data && typeof data === 'object') {
-    for (const key of Object.keys(data)) {
-      const value = data[key]
-      const type = typeof value
-      if (type === 'string' || type === 'number' || type === 'boolean' || value === null) {
-        cleanData[key] = value
-      }
-    }
-  }
-
-  console.log(`[CloudFunction] SDK fallback 调用: ${name}`, cleanData)
 
   try {
     const result = await appInstance.callFunction({
       name,
-      data: cleanData,
+      data: data || {},
     })
-
-    console.log(`[CloudFunction] SDK fallback 返回:`, result)
+    console.log(`[CloudFunction] 调用成功: ${name}`, result)
     return (result as { result: T }).result
-  } catch (error) {
-    console.error(`[CloudFunction] SDK fallback 调用失败:`, error)
-    throw error
+  } catch (sdkError) {
+    console.error(
+      `[CloudFunction] 调用失败: ${name}`,
+      '\n可能原因：',
+      '\n1. 当前域名未加入腾讯云安全域名白名单',
+      '\n2. 云函数未部署或已删除',
+      '\n3. 网络连接异常',
+      '\n错误详情:',
+      sdkError
+    )
+    throw new Error(`云函数 ${name} 调用失败，请检查网络连接或联系管理员`)
   }
 }
 
