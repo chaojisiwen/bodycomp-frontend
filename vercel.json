@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    { "source": "/api/hunyuan/:path*", "destination": "https://api.hunyuan.cloud.tencent.com/:path*" },
+    { "source": "/api/baidu/:path*", "destination": "https://aip.baidubce.com/:path*" },
+    { "source": "/feishu_callback", "destination": "/feishu_callback.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
