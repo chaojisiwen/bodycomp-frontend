@@ -125,6 +125,7 @@ export interface ICoach {
   _id?: string
   user_id?: string
   title?: string
+  name?: string
   specialty?: string | string[]
   bio?: string
   avatar?: string
@@ -133,6 +134,7 @@ export interface ICoach {
   member_count?: number
   memberCount?: number
   verified?: boolean
+  invite_code?: string   // 教练邀请码，用于会员搜索
   created_at?: Date
 }
 

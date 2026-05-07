@@ -1,3 +1,13 @@
+// ============================================================
+// ⚠️ 登录核心文件 - 修改需谨慎
+// 本文件属于系统认证链路的关键环节
+// 修改前请确认了解：登录流程、路由守卫、AuthContext 三者关系
+// 关键约束：
+//   - ROUTES.LOGIN 是 RequireAuth 拦截后的统一跳转目标
+//   - 新增路由需同步更新 ROUTES 常量和 router/index.tsx 的渲染逻辑
+//   - 路径变更需同步更新 LoginPage.tsx 中的 navigate() 调用
+// ============================================================
+
 /**
  * 路由配置
  */
@@ -18,6 +28,7 @@ export const ROUTES = {
   MEMBER_BODY_DATA: '/member/body-data',
   MEMBER_PROFILE: '/member/profile',
   MEMBER_MESSAGES: '/member/messages',
+  MEMBER_PLANS: '/member/plans',
   COACH_HOME: '/coach',
   COACH_MEMBERS: '/coach/members',
   COACH_MEMBER_DETAIL: '/coach/members/:memberId',

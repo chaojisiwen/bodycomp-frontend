@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>飞书授权回调</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, system-ui, sans-serif;
+      background: #f0fdf4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .icon { font-size: 48px; margin-bottom: 16px; }
+    h1 { font-size: 20px; color: #166534; margin-bottom: 8px; }
+    p { color: #666; font-size: 14px; line-height: 1.6; }
+    .code-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 16px 0;
+      font-size: 12px;
+      color: #333;
+      word-break: break-all;
+      text-align: left;
+      font-family: monospace;
+    }
+    .hint { color: #999; font-size: 12px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">✅</div>
+    <h1>飞书授权成功！</h1>
+    <p>请复制下方 code 发送给我：</p>
+    <div class="code-box" id="codeDisplay">正在提取授权码...</div>
+    <button onclick="copyCode()" style="background:#22c55e;color:white;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer">复制 code</button>
+    <div class="hint">然后把 code 发到飞书对话里就行</div>
+  </div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+    const display = document.getElementById('codeDisplay');
+    if (code) {
+      display.textContent = code;
+    } else {
+      display.textContent = '未获取到 code 参数\n完整URL: ' + window.location.href;
+    }
+    function copyCode() {
+      if (code) {
+        navigator.clipboard.writeText(code).then(() => {
+          alert('已复制！请发到飞书对话中');
+        });
+      }
+    }
+  </script>
+</body>
+</html>

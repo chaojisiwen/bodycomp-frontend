@@ -5,6 +5,7 @@
 import { getApp } from '../index'
 import { COLLECTIONS } from '../config'
 import type { IBodyRecord, IBodyRecordInput } from '../types'
+import { getCurrentUserId } from './utils'
 
 // ============================================================
 // CRUD 操作
@@ -21,14 +22,21 @@ export async function getBodyRecords(options?: {
     const db = getApp()?.database()
     if (!db) return []
 
-    // 构建查询
-    const res = await db.collection(COLLECTIONS.BODY_RECORDS)
-      .orderBy('record_date', 'desc')
-      .limit(options?.limit || 100)
-      .skip(options?.offset || 0)
-      .get()
+    // 构建查询（必须按用户过滤，防止返回所有人的数据）
+    const uid = getCurrentUserId()
+    if (uid) {
+      const res = await db.collection(COLLECTIONS.BODY_RECORDS)
+        .where({ user_id: uid })
+        .orderBy('record_date', 'desc')
+        .limit(options?.limit || 100)
+        .skip(options?.offset || 0)
+        .get()
 
-    return res.data as IBodyRecord[]
+      return res.data as IBodyRecord[]
+    }
+
+    // 未登录时返回空
+    return []
   } catch (error) {
     console.error('[BodyRecords] 获取列表失败:', error)
     return []
@@ -67,6 +75,8 @@ export async function createBodyRecord(
 
     const res = await db.collection(COLLECTIONS.BODY_RECORDS).add({
       ...data,
+      // 确保 record_date 是 Date 对象
+      record_date: data.record_date ? new Date(data.record_date) : new Date(),
       created_at: new Date(),
       updated_at: new Date(),
     })
@@ -131,8 +141,12 @@ export async function getLatestBodyRecord(): Promise<IBodyRecord | null> {
     const db = getApp()?.database()
     if (!db) return null
 
+    const uid = getCurrentUserId()
+    if (!uid) return null
+
     const res = await db
       .collection(COLLECTIONS.BODY_RECORDS)
+      .where({ user_id: uid })
       .orderBy('record_date', 'desc')
       .limit(1)
       .get()
@@ -160,9 +174,13 @@ export async function getBodyRecordTrend(
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
 
+    const uid = getCurrentUserId()
+    if (!uid) return []
+
     const res = await db
       .collection(COLLECTIONS.BODY_RECORDS)
       .where({
+        user_id: uid,
         record_date: db.command.gte(startDate.getTime()),
       })
       .orderBy('record_date', 'asc')

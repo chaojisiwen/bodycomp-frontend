@@ -132,7 +132,13 @@ export default function LoginPage() {
       finishLogin(result.data?.role || 'member', result.data)
     } catch (err) {
       console.error('[LoginPage] Step 1 异常:', err)
-      setError('服务暂不可用，请检查网络连接后点击重试')
+      const msg = (err as Error)?.message || '未知错误'
+      // 如果错误消息已经包含明确的指引（如 initCloudbase 抛出的域名白名单错误），直接展示
+      if (msg.includes('安全域名') || msg.includes('白名单') || msg.includes('未初始化')) {
+        setError(msg)
+      } else {
+        setError('服务暂不可用，请检查网络连接后点击重试')
+      }
     } finally {
       setLoading(false)
     }
@@ -185,7 +191,12 @@ export default function LoginPage() {
       finishLogin(result.data?.role || 'member', result.data)
     } catch (err) {
       console.error('[LoginPage] Step 2 异常:', err)
-      setError('服务暂不可用，请检查网络连接后点击重试')
+      const msg = (err as Error)?.message || '未知错误'
+      if (msg.includes('安全域名') || msg.includes('白名单') || msg.includes('未初始化')) {
+        setError(msg)
+      } else {
+        setError('服务暂不可用，请检查网络连接后点击重试')
+      }
     } finally {
       setLoading(false)
     }
@@ -237,7 +248,12 @@ export default function LoginPage() {
       finishLogin(result.data?.role || loginData?.role || 'member', result.data)
     } catch (err) {
       console.error('[LoginPage] Step 3 异常:', err)
-      setError('服务暂不可用，请检查网络连接后点击重试')
+      const msg = (err as Error)?.message || '未知错误'
+      if (msg.includes('安全域名') || msg.includes('白名单') || msg.includes('未初始化')) {
+        setError(msg)
+      } else {
+        setError('服务暂不可用，请检查网络连接后点击重试')
+      }
     } finally {
       setLoading(false)
     }
@@ -264,12 +280,18 @@ export default function LoginPage() {
   // isAuthenticated 仍为 false，RequireAuth 会拦截跳转踢回 /login
   // window.location.href 触发全页刷新，AuthProvider 从 localStorage 恢复状态
   const finishLogin = (role: string, data: LoginResponse['data'] | null) => {
+    const inviteCode = code.trim().toUpperCase()
+
+    // ⚠️ 先清除旧缓存，防止切换账号时残留旧 ID 导致数据写错
+    localStorage.removeItem('user')
+
     const userData = {
-      id: data?.uid || data?.userId || code.trim().toUpperCase(),
+      id: data?.uid || data?.userId || inviteCode,
       name: data?.name || '用户',
       phone: '',
       role: role as 'member' | 'coach',
       coachId: '',
+      inviteCode, // 保存邀请码，供 CloudBase 操作（绑定教练/更新教练资料）使用
     }
 
     login(userData)

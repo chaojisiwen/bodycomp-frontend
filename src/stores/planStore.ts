@@ -93,6 +93,39 @@ export interface PlanTarget {
   targetProtein: number
   targetFat: number
   targetCarb: number
+
+  // 体成分目标进度（新增，可选，向后兼容）
+  bodyGoalMetric?: BodyGoalMetric
+  bodyGoalTarget?: number
+  bodyGoalStart?: number   // 设置目标时的起始值
+  bodyGoalSetAt?: string   // 设置目标的时间
+}
+
+/** 可追踪的体成分指标 */
+export type BodyGoalMetric =
+  | 'weight'
+  | 'body_fat'
+  | 'waist'
+  | 'muscle_mass'
+  | 'visceral_fat'
+  | 'fat_free_mass'
+  | 'protein_percent'
+  | 'subcutaneous_fat'
+  | 'water_content'
+  | 'bone_mass'
+
+/** 指标显示配置 */
+export const BODY_GOAL_CONFIG: Record<BodyGoalMetric, { label: string; unit: string; direction: 'decrease' | 'increase' }> = {
+  weight: { label: '体重', unit: 'kg', direction: 'decrease' },
+  body_fat: { label: '体脂率', unit: '%', direction: 'decrease' },
+  waist: { label: '腰围', unit: 'cm', direction: 'decrease' },
+  muscle_mass: { label: '肌肉量', unit: 'kg', direction: 'increase' },
+  visceral_fat: { label: '内脏脂肪', unit: '', direction: 'decrease' },
+  fat_free_mass: { label: '去脂体重', unit: 'kg', direction: 'increase' },
+  protein_percent: { label: '蛋白质', unit: '%', direction: 'increase' },
+  subcutaneous_fat: { label: '皮下脂肪', unit: '%', direction: 'decrease' },
+  water_content: { label: '水分率', unit: '%', direction: 'increase' },
+  bone_mass: { label: '骨量', unit: 'kg', direction: 'increase' },
 }
 
 const DEFAULT_PLAN_TARGET: PlanTarget = {

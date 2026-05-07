@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Clock, CheckCircle, Bell, Send, Check } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Modal } from '@/components/common/Modal'
+import { useAuth } from '@/contexts/AuthContext'
 import { useWarningStore, useFilteredWarnings, useWarningStats, type IWarning } from '@/stores/warningStore'
 
 export function WarningCenterPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   // 接入 store
   const { filter, levelFilter, setFilter, setLevelFilter, fetchWarnings, sendReminder } = useWarningStore()
@@ -19,19 +21,10 @@ export function WarningCenterPage() {
   const [customMessage, setCustomMessage] = useState('')
   const [messageSent, setMessageSent] = useState(false)
 
-  // 快捷消息模板
-  const quickMessages = [
-    { emoji: '💪', text: '今天的训练计划记得完成哦～' },
-    { emoji: '🥗', text: '今天的饮食记录还没填呢，快去记录吧' },
-    { emoji: '📊', text: '本周数据报告出来了，效果不错！' },
-    { emoji: '⏰', text: '明天记得来复测～' },
-    { emoji: '❓', text: '有什么问题随时问我' },
-  ]
-
   // 组件挂载时拉取预警数据
   useEffect(() => {
-    fetchWarnings()
-  }, [fetchWarnings])
+    fetchWarnings(user?.id)
+  }, [fetchWarnings, user?.id])
 
   const handleSendReminder = (warning: IWarning) => {
     setMessageTarget(warning)
@@ -40,7 +33,7 @@ export function WarningCenterPage() {
 
   const handleSendMessage = async () => {
     if (!messageTarget) return
-    await sendReminder(messageTarget.id, customMessage)
+    await sendReminder(messageTarget.id, customMessage, user?.id)
     setMessageSent(true)
     setTimeout(() => {
       setShowMessageModal(false)
@@ -197,30 +190,8 @@ export function WarningCenterPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* 快捷消息模板 */}
+            {/* 发送消息 */}
             <div>
-              <p className="text-sm text-slate-400 mb-2">快捷消息</p>
-              <div className="grid grid-cols-1 gap-2">
-                {quickMessages.map((msg, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCustomMessage(msg.text)}
-                    className={`text-left p-3 rounded-xl transition-all ${
-                      customMessage === msg.text 
-                        ? 'bg-emerald-500/20 border border-emerald-500/50' 
-                        : 'bg-slate-800/50 border border-transparent hover:bg-slate-800'
-                    }`}
-                  >
-                    <span className="text-base mr-2">{msg.emoji}</span>
-                    <span className="text-sm text-slate-200">{msg.text}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 自定义输入 */}
-            <div>
-              <p className="text-sm text-slate-400 mb-2">或编辑消息</p>
               <textarea
                 value={customMessage}
                 onChange={(e) => setCustomMessage(e.target.value)}

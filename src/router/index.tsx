@@ -1,3 +1,13 @@
+// ============================================================
+// ⚠️ 登录核心文件 - 修改需谨慎
+// 本文件属于系统认证链路的关键环节
+// 修改前请确认了解：登录流程、路由守卫、AuthContext 三者关系
+// 关键约束：
+//   - RequireAuth 必须检查 isAuthenticated（禁止添加任何绕过逻辑）
+//   - 默认重定向必须指向 ROUTES.LOGIN（未登录）或会员/教练首页（已登录）
+//   - 路由路径必须与 router/routes.tsx 中 ROUTES 常量保持一致
+// ============================================================
+
 /**
  * 路由入口
  * 使用 HashRouter 以兼容 COS 静态托管（无需服务端 SPA 回退）
@@ -12,11 +22,6 @@ import { routes, ROUTES } from './routes'
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
   const location = useLocation()
-
-  // 开发环境跳过登录
-  if (import.meta.env.DEV) {
-    return <>{children}</>
-  }
 
   if (!isAuthenticated) {
     return <Navigate to={ROUTES.LOGIN} state={{ from: location }} replace />

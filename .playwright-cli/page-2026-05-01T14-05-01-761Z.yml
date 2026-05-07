@@ -1,0 +1,32 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - img [ref=e8]
+          - generic [ref=e10]: Equilibrio
+        - generic [ref=e11]:
+          - button "个人设置" [ref=e12] [cursor=pointer]:
+            - img [ref=e13]
+          - button "切换" [ref=e17] [cursor=pointer]
+    - main [ref=e18]
+    - navigation [ref=e21]:
+      - generic [ref=e22]:
+        - button "首页" [ref=e23] [cursor=pointer]:
+          - img [ref=e24]
+          - generic [ref=e27]: 首页
+        - button "摄入" [ref=e29] [cursor=pointer]:
+          - img [ref=e30]
+          - generic [ref=e35]: 摄入
+        - button "消耗" [ref=e36] [cursor=pointer]:
+          - img [ref=e37]
+          - generic [ref=e39]: 消耗
+        - button "数据" [ref=e40] [cursor=pointer]:
+          - img [ref=e41]
+          - generic [ref=e43]: 数据
+        - button "消息" [ref=e44] [cursor=pointer]:
+          - img [ref=e45]
+          - generic [ref=e47]: 消息
+  - contentinfo [ref=e48]:
+    - link "粤ICP备2026050675号" [ref=e49] [cursor=pointer]:
+      - /url: https://beian.miit.gov.cn/

@@ -1,0 +1,64 @@
+{
+  "name": "体成分管理系统 bodycomp-frontend",
+  "techStack": ["React", "TypeScript", "Tailwind CSS", "Zustand", "CloudBase", "HashRouter", "COS", "CDN"],
+  "domain": "v2.equilibrio-corporeo.space",
+  "createdAt": "2026-04",
+  "lastScan": "2026-05-05",
+  "tests": 18,
+  "pages": [
+    {"name": "登录页", "path": "/login", "file": "LoginPage.tsx", "lines": 535, "group": "login", "status": "complete", "dataSource": "cloudbase-auth"},
+    {"name": "会员首页", "path": "/member", "file": "member/HomePage.tsx", "lines": 462, "group": "member", "status": "complete", "dataSource": "all-stores"},
+    {"name": "饮食录入", "path": "/member/intake", "file": "member/IntakePage.tsx", "lines": 722, "group": "member", "status": "complete", "dataSource": "mealStore"},
+    {"name": "运动记录", "path": "/member/exercise", "file": "member/ExercisePage.tsx", "lines": 1136, "group": "member", "status": "needs-optimization", "dataSource": "exerciseStore"},
+    {"name": "AI 食物识别", "path": "/member/recognize", "file": "member/RecognizePage.tsx", "lines": 974, "group": "member", "status": "needs-optimization", "dataSource": "hunyuan-aiProxy"},
+    {"name": "体成分数据", "path": "/member/body-data", "file": "member/MyBodyDataPage.tsx", "lines": 1075, "group": "member", "status": "needs-optimization", "dataSource": "bodyStore"},
+    {"name": "个人资料", "path": "/member/profile", "file": "member/MemberProfilePage.tsx", "lines": 834, "group": "member", "status": "complete", "dataSource": "profileStore"},
+    {"name": "我的计划", "path": "/member/plans", "file": "member/MyPlansPage.tsx", "lines": 339, "group": "member", "status": "complete", "dataSource": "assignedPlanStore"},
+    {"name": "消息中心", "path": "/member/messages", "file": "member/MemberMessagesPage.tsx", "lines": 397, "group": "member", "status": "needs-optimization", "dataSource": "notifications-api"},
+    {"name": "教练首页", "path": "/coach", "file": "coach/HomePage.tsx", "lines": 314, "group": "coach", "status": "complete", "dataSource": "coachApi"},
+    {"name": "会员列表", "path": "/coach/members", "file": "coach/CoachMemberListPage.tsx", "lines": 227, "group": "coach", "status": "complete", "dataSource": "coachApi"},
+    {"name": "会员详情", "path": "/coach/members/:id", "file": "coach/CoachMemberDetailPage.tsx", "lines": 1302, "group": "coach", "status": "needs-refactor", "dataSource": "coachApi"},
+    {"name": "预警中心", "path": "/coach/warnings", "file": "coach/WarningCenterPage.tsx", "lines": 257, "group": "coach", "status": "complete", "dataSource": "warningStore"},
+    {"name": "方案库", "path": "/coach/plans", "file": "coach/PlanLibraryPage.tsx", "lines": 853, "group": "coach", "status": "needs-optimization", "dataSource": "planStore"},
+    {"name": "教练资料", "path": "/coach/profile", "file": "coach/CoachProfilePage.tsx", "lines": 452, "group": "coach", "status": "complete", "dataSource": "coachProfileStore"},
+    {"name": "通知中心", "path": "/coach/notifications", "file": "coach/NotificationCenterPage.tsx", "lines": 131, "group": "coach", "status": "basic", "dataSource": "pending"}
+  ],
+  "stores": [
+    {"name": "mealStore", "lines": 260, "description": "饮食记录管理"},
+    {"name": "exerciseStore", "lines": 195, "description": "运动记录管理"},
+    {"name": "bodyStore", "lines": 171, "description": "体成分数据管理"},
+    {"name": "recognizeStore", "lines": 119, "description": "AI识别状态"},
+    {"name": "profileStore", "lines": 168, "description": "用户资料管理"},
+    {"name": "planStore", "lines": 397, "description": "训练方案管理（6处TODO）"},
+    {"name": "warningStore", "lines": 229, "description": "预警提醒管理"},
+    {"name": "coachProfileStore", "lines": 158, "description": "教练资料管理"},
+    {"name": "assignedPlanStore", "lines": 54, "description": "已分配计划"},
+    {"name": "notificationStore", "lines": 160, "description": "通知消息管理"}
+  ],
+  "services": [
+    {"name": "api.ts", "lines": 586, "description": "统一API入口"},
+    {"name": "auth", "lines": 412, "description": "用户认证"},
+    {"name": "coach", "lines": 522, "description": "教练业务API"},
+    {"name": "meals", "lines": 289, "description": "饮食CRUD"},
+    {"name": "exercises", "lines": 281, "description": "运动CRUD"},
+    {"name": "bodyRecords", "lines": 176, "description": "体成分记录"},
+    {"name": "recognize (11子模块)", "lines": 2024, "description": "AI识别服务（config/prompts/hunyuan/zhipu/gemini/baidu/voting/openclaw/mock/calibration/nutrition + 调度器）"},
+    {"name": "notifications", "lines": 308, "description": "消息通知"}
+  ],
+  "issues": {
+    "p0": [],
+    "p1": [
+      "CoachMemberDetailPage 1302行（需拆分）",
+      "planStore 6处TODO未实现（后端无对应云函数）",
+      "百度识别 /api/baidu 在 COS 上代理路径不通",
+      "目标进度反馈缺失"
+    ],
+    "p2": [
+      "缺少ESLint/Prettier代码规范",
+      "RingChart/NutritionProgress数据边界校验缺失",
+      "COS上残留旧版本hash文件",
+      "NotificationCenterPage功能单薄",
+      "MemberMessagesPage reaction云端同步优化"
+    ]
+  }
+}

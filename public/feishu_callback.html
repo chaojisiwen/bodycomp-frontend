@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>飞书授权回调</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 40px 32px;
+      max-width: 460px;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+    .check { font-size: 56px; margin-bottom: 12px; }
+    h1 { font-size: 22px; color: #166534; margin-bottom: 6px; }
+    .sub { color: #666; font-size: 14px; margin-bottom: 24px; }
+    label { display: block; text-align: left; font-size: 13px; color: #555; margin-bottom: 6px; font-weight: 500; }
+    .code-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 13px;
+      color: #1e293b;
+      word-break: break-all;
+      text-align: left;
+      font-family: "SF Mono", "Fira Code", monospace;
+      line-height: 1.8;
+      margin-bottom: 20px;
+      user-select: all;
+    }
+    .btn {
+      display: inline-block;
+      background: #22c55e;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 32px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:active { transform: scale(0.97); background: #16a34a; }
+    .hint { color: #94a3b8; font-size: 12px; margin-top: 20px; }
+    .error { color: #dc2626; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="card" id="app"></div>
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const state = params.get('state');
+      const error = params.get('error');
+      const app = document.getElementById('app');
+
+      function render() {
+        if (error) {
+          app.innerHTML = `
+            <div class="check">❌</div>
+            <h1>授权失败</h1>
+            <p class="sub">${error}</p>
+            <p class="hint">请重新尝试授权</p>
+          `;
+          return;
+        }
+
+        if (!code) {
+          app.innerHTML = `
+            <div class="check">⏳</div>
+            <h1>等待授权中</h1>
+            <p class="sub">未获取到 code 参数</p>
+            <div class="code-box">window.location.href = ${window.location.href}</div>
+            <p class="hint">请确认授权流程是否正确完成</p>
+          `;
+          return;
+        }
+
+        app.innerHTML = `
+          <div class="check">✅</div>
+          <h1>授权成功！</h1>
+          <p class="sub">已获取到授权码，请复制并发送给我</p>
+          <label>授权码（code）：</label>
+          <div class="code-box" id="codeText">${code}</div>
+          <button class="btn" onclick="copyCode()">📋 复制 code</button>
+          <p class="hint">复制后发到飞书跟我的对话里即可</p>
+        `;
+      }
+
+      window.copyCode = function() {
+        const el = document.getElementById('codeText');
+        if (!el) return;
+        const text = el.textContent;
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).then(() => {
+            alert('✅ 已复制！请发到飞书对话');
+          });
+        } else {
+          const range = document.createRange();
+          range.selectNode(el);
+          window.getSelection().removeAllRanges();
+          window.getSelection().addRange(range);
+          document.execCommand('copy');
+          alert('✅ 已复制！请发到飞书对话');
+        }
+      };
+
+      render();
+    })();
+  </script>
+</body>
+</html>

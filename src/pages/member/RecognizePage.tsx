@@ -3,7 +3,7 @@ import { Camera, RotateCcw, Check, Loader2, AlertCircle, X, Scale, ChevronRight 
 import { useRecognizeStore, type RecognizedFoodItem, type RecognizeAnalysis } from '@/stores'
 import { useMealStore } from '@/stores/mealStore'
 import { useProfileStore } from '@/stores/profileStore'
-import { recognizeFood, calculateTotalNutrition, calibrateFist } from '@/cloudbase/services/recognizeApi'
+import { recognizeFood, calculateTotalNutrition, calibrateFist } from '@/cloudbase/services/recognize'
 import type { IFoodItem } from '@/cloudbase/types'
 
 type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack'
@@ -31,6 +31,7 @@ export function RecognizePage() {
   const [isMockData, setIsMockData] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
 
   // 拳头校准相关
   const [showCalibration, setShowCalibration] = useState(false)
@@ -46,6 +47,10 @@ export function RecognizePage() {
 
   const handleSelectImage = () => {
     fileInputRef.current?.click()
+  }
+
+  const handleCameraCapture = () => {
+    cameraInputRef.current?.click()
   }
 
   // 验证图片是否能被浏览器加载
@@ -276,7 +281,10 @@ export function RecognizePage() {
 
     if (!topDownDataUrl) {
       console.error('[FistCalibrate] 俯瞰图数据丢失，请重新校准')
-      setCalibrateStep('sideview')
+      alert('俯瞰图数据丢失，请重新开始校准')
+      setFistTopDown(null)
+      setFistSideView(null)
+      setCalibrateStep('intro')
       return
     }
     const topBase64 = topDownDataUrl.match(/^data:image\/\w+;base64,(.+)$/)?.[1] || ''
@@ -299,9 +307,10 @@ export function RecognizePage() {
       setCalibrateStep('done')
     } else {
       console.error('[FistCalibrate] 校准失败:', result.error)
-      // 失败时回到侧拍步骤
-      setFistSideView(null)
-      setCalibrateStep('sideview')
+      // 失败时保留两张照片，回到预览确认页（不跳回侧拍页，避免无限循环）
+      // 同时把错误信息写入全局状态供 UI 显示
+      alert('校准失败：' + (result.error || '请检查网络后重试'))
+      setCalibrateStep('sideview_preview')
     }
   }
 
@@ -316,6 +325,9 @@ export function RecognizePage() {
     clearCurrentResult()
     if (fileInputRef.current) {
       (fileInputRef.current as HTMLInputElement).value = ''
+    }
+    if (cameraInputRef.current) {
+      (cameraInputRef.current as HTMLInputElement).value = ''
     }
   }
 
@@ -339,7 +351,7 @@ export function RecognizePage() {
 
     // 写入 mealStore（同时保存识别时的照片）
     addMeal({
-      user_id: 'current_user', // TODO: 后续接入真实 auth 后替换
+      user_id: profile.memberId || 'unknown',
       meal_type: selectedMealType,
       meal_date: new Date(),
       foods,
@@ -395,10 +407,18 @@ export function RecognizePage() {
         </button>
       )}
 
-      {/* 隐藏的文件输入 */}
+      {/* 隐藏的文件输入 - 选择照片（无 capture，可访问相册） */}
       <input
         type="file"
         ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="image/*"
+        className="hidden"
+      />
+      {/* 隐藏的文件输入 - 拍照（有 capture，启动相机） */}
+      <input
+        type="file"
+        ref={cameraInputRef}
         onChange={handleFileChange}
         accept="image/*"
         capture="environment"
@@ -426,12 +446,20 @@ export function RecognizePage() {
             <p className="text-sm text-gray-400 mb-6">
               将食物放在光线充足的环境下拍摄，可获得更准确的识别结果
             </p>
-            <button
-              onClick={handleSelectImage}
-              className="px-8 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 text-white font-semibold hover:opacity-90 transition-opacity"
-            >
-              拍照/选择照片
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleCameraCapture}
+                className="flex-1 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 text-white font-semibold hover:opacity-90 transition-opacity"
+              >
+                拍照
+              </button>
+              <button
+                onClick={handleSelectImage}
+                className="flex-1 py-3 rounded-full bg-white/10 text-gray-300 font-medium hover:bg-white/20 transition-colors"
+              >
+                选择照片
+              </button>
+            </div>
           </div>
         )}
 

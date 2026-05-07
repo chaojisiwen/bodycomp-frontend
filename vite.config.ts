@@ -10,6 +10,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: true,  // 允许局域网访问
     proxy: {
       // 代理腾讯云混元 API 请求，解决跨域问题
       '/api/hunyuan': {
@@ -27,6 +28,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['@cloudbase/js-sdk'],
+    entries: ['index.html'],
   },
   build: {
     commonjsOptions: {
@@ -34,20 +36,31 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-ui': [
-            '@radix-ui/react-avatar',
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-select',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-progress',
-            '@radix-ui/react-slot',
-          ],
-          'vendor-icons': ['lucide-react', 'react-icons'],
-          'vendor-state': ['zustand'],
-          'vendor-cloud': ['@cloudbase/js-sdk'],
-          'vendor-heic': ['heic2any', 'libheif-js'],
+        manualChunks(id) {
+          // React 核心库必须全部进同一个 chunk，防止 Hook 调度器重复
+          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+            return 'vendor-react'
+          }
+          // UI 组件库
+          if (id.includes('@radix-ui')) {
+            return 'vendor-ui'
+          }
+          // 图标库（依赖 React，跟随 vendor-react 避免重复）
+          if (id.includes('lucide-react') || id.includes('react-icons')) {
+            return 'vendor-react'
+          }
+          // 状态管理
+          if (id.includes('zustand')) {
+            return 'vendor-state'
+          }
+          // 云服务
+          if (id.includes('@cloudbase')) {
+            return 'vendor-cloud'
+          }
+          // HEIC 图片处理
+          if (id.includes('heic2any') || id.includes('libheif-js')) {
+            return 'vendor-heic'
+          }
         },
       },
     },

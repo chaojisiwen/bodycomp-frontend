@@ -31,7 +31,9 @@ import { Card } from '@/components/ui/card'
 import { useProfileStore } from '@/stores'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { usePlanTarget } from '@/stores/planStore'
-import { getCoaches } from '@/cloudbase/services/coach'
+import { useAuth } from '@/contexts/AuthContext'
+import { getCoaches, bindCoach, unbindCoach } from '@/cloudbase/services/coach'
+import { updateCurrentUserProfile } from '@/cloudbase/services'
 
 // ─── 通用弹窗容器 ───────────────────────────────────────────────
 function BottomSheet({
@@ -150,11 +152,18 @@ function MenuItem({ icon, label, badge, onClick, danger }: MenuItemData) {
 // ════════════════════════════════════════════════════════════════
 export function MemberProfilePage() {
   const navigate = useNavigate()
+  const { user, login } = useAuth()
 
   // ── profileStore（头像、姓名、会员编号、打卡天数、目标） ──
-  const { profile, setProfile, setGoal, hasCoach, setHasCoach, currentCoach, setCoach } = useProfileStore()
-  const { name, memberId, checkInDays, goal, phone: storedPhone, avatar: storedAvatar } = profile
+  const { profile, setProfile, setGoal, fetchProfile, hasCoach, setHasCoach, currentCoach, setCoach } = useProfileStore()
+  const { name, memberId, openid, checkInDays, goal, phone: storedPhone, avatar: storedAvatar } = profile
   const { notifications, unreadCount } = useNotificationStore()
+
+  // ── 首次挂载：从 CloudBase 拉取用户信息（同步 openid + 确保 DB 记录存在） ──
+  useEffect(() => {
+    fetchProfile().catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── 账户设置编辑状态 ──
   const [editName, setEditName] = useState(name)
@@ -167,18 +176,19 @@ export function MemberProfilePage() {
   useEffect(() => { setEditPhone(storedPhone || '') }, [storedPhone])
 
   // ── 教练列表（从 API 真实获取）─────────────────────────────
-  const [availableCoaches, setAvailableCoaches] = useState<{ id: string; name: string; avatar: string; tags: string[]; rating: number }[]>([])
+  const [availableCoaches, setAvailableCoaches] = useState<{ id: string; name: string; avatar: string; tags: string[]; rating: number; inviteCode: string }[]>([])
   const [coachesLoading, setCoachesLoading] = useState(true)
 
   useEffect(() => {
     getCoaches({ verified: true }).then((coaches) => {
       if (coaches && coaches.length > 0) {
         setAvailableCoaches(coaches.map(c => ({
-          id: c._id || c.user_id || '',
+          id: c.user_id || c._id || '',
           name: (c as any).name || c.title || '教练',
           avatar: ((c as any).name || c.title || '教').charAt(0),
           tags: Array.isArray((c as any).specialty) ? (c as any).specialty : (c.specialty ? [c.specialty] : []),
           rating: c.rating || 0,
+          inviteCode: c.invite_code || '',
         })))
       } else {
         // API 无数据时保持空列表，UI 会显示「暂无可用教练」
@@ -192,25 +202,66 @@ export function MemberProfilePage() {
 
   // ── 教练选择状态（绑定时用） ──
   const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // 根据搜索词过滤教练列表（支持姓名、标签、邀请码）
+  const filteredCoaches = availableCoaches.filter(coach => {
+    if (!searchQuery.trim()) return true
+    const q = searchQuery.trim().toLowerCase()
+    return (
+      coach.name.toLowerCase().includes(q) ||
+      coach.tags.some(tag => tag.toLowerCase().includes(q)) ||
+      coach.inviteCode.toLowerCase().includes(q)
+    )
+  })
 
   // ── 教练绑定状态同步（已由 persist middleware 自动处理） ──
   // (noop — profileStore's persist middleware handles persistence)
 
   // ── 解绑 ──
-  const handleUnbind = () => {
+  const [unbinding, setUnbinding] = useState(false)
+  const handleUnbind = async () => {
+    if (!selectedCoachId && !currentCoach?.id) return
+    setUnbinding(true)
+    try {
+      const result = await unbindCoach(selectedCoachId || currentCoach?.id || '')
+      if (!result.success) {
+        console.error('[MemberProfile] 解绑失败:', result.error)
+        alert('解绑失败: ' + (result.error || '未知错误'))
+        return
+      }
+    } catch (e) {
+      console.error('[MemberProfile] 解绑失败:', e)
+      alert('解绑失败，请稍后重试')
+      return
+    }
     setHasCoach(false)
     setCoach(null)
     setSelectedCoachId(null)
+    setUnbinding(false)
   }
 
   // ── 绑定教练 ──
-  const handleBindCoach = () => {
+  const [binding, setBinding] = useState(false)
+  const handleBindCoach = async () => {
     const coach = availableCoaches.find(c => c.id === selectedCoachId)
-    if (coach) {
-      setCoach(coach)
-      setHasCoach(true)
-      close()
+    if (!coach) return
+    setBinding(true)
+    try {
+      // 调用 CloudBase API 写入 coach_members 集合
+      const result = await bindCoach(coach.id)
+      if (result.success) {
+        setCoach(coach)
+        setHasCoach(true)
+        close()
+      } else {
+        alert('绑定失败: ' + (result.error || '未知错误'))
+      }
+    } catch (e) {
+      console.error('[MemberProfile] 绑定失败:', e)
+      alert('绑定失败，请稍后重试')
     }
+    setBinding(false)
   }
 
   // ── 弹窗状态 ──
@@ -309,8 +360,12 @@ export function MemberProfilePage() {
       {/* ── 个人信息卡片 ── */}
       <Card className="p-4">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500 to-teal-400 flex items-center justify-center text-2xl font-bold">
-            {name.charAt(0).toUpperCase()}
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500 to-teal-400 flex items-center justify-center text-2xl font-bold overflow-hidden">
+            {storedAvatar ? (
+              <img src={storedAvatar} alt="头像" className="w-full h-full object-cover" />
+            ) : (
+              name.charAt(0).toUpperCase()
+            )}
           </div>
           <div className="flex-1">
             <h2 className="text-xl font-bold">{name}</h2>
@@ -354,6 +409,9 @@ export function MemberProfilePage() {
                   </span>
                 ))}
               </div>
+              {currentCoach?.inviteCode && (
+                <p className="text-xs text-gray-600 mt-1">ID: {currentCoach.inviteCode}</p>
+              )}
             </div>
             <button onClick={() => open('chat')} className="px-4 py-2 rounded-full bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 active:scale-95 transition-all">
               咨询
@@ -436,20 +494,42 @@ export function MemberProfilePage() {
               <div
                 className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-400 flex items-center justify-center text-3xl font-bold overflow-hidden"
               >
-                {editAvatar ? (
+                {editAvatar === 'loading' ? (
+                  <span className="animate-pulse text-sm">转换中…</span>
+                ) : editAvatar ? (
                   <img src={editAvatar} alt="头像" className="w-full h-full object-cover" />
                 ) : (
                   editName.charAt(0).toUpperCase()
                 )}
               </div>
               <button
-                onClick={() => {
+                onClick={async () => {
                   const input = document.createElement('input')
                   input.type = 'file'
                   input.accept = 'image/*'
-                  input.onchange = (e) => {
+                  input.onchange = async (e) => {
                     const file = (e.target as HTMLInputElement).files?.[0]
-                    if (file) {
+                    if (!file) return
+
+                    // 检测 HEIC/HEIF 格式（苹果手机默认拍照格式）
+                    const isHeic =
+                      file.type === 'image/heic' ||
+                      file.type === 'image/heif' ||
+                      file.name.toLowerCase().endsWith('.heic') ||
+                      file.name.toLowerCase().endsWith('.heif')
+
+                    if (isHeic) {
+                      try {
+                        setEditAvatar('loading')
+                        const { convertHeicToJpeg } = await import('@/utils/heicConvert')
+                        const jpegBase64 = await convertHeicToJpeg(file)
+                        setEditAvatar(jpegBase64)
+                      } catch (err) {
+                        console.error('[Avatar] HEIC转换失败:', err)
+                        alert('照片格式转换失败，请尝试使用 JPG/PNG 格式的照片')
+                        setEditAvatar('')
+                      }
+                    } else {
                       const reader = new FileReader()
                       reader.onload = () => setEditAvatar(reader.result as string)
                       reader.readAsDataURL(file)
@@ -517,8 +597,19 @@ export function MemberProfilePage() {
           </div>
 
           <button
-            onClick={() => {
+            onClick={async () => {
+              // 1. 保存到本地 store（立即生效 + persist 持久化）
               setProfile({ name: editName, phone: editPhone, avatar: editAvatar })
+              // 2. 写入 CloudBase users 集合
+              await updateCurrentUserProfile({
+                name: editName,
+                avatar: editAvatar || undefined,
+                phone: editPhone || undefined,
+              })
+              // 3. 同步到 AuthContext（其他页面共享 user.name）
+              if (user) {
+                login({ ...user, name: editName })
+              }
               setEditingField(null)
               close()
             }}
@@ -580,14 +671,6 @@ export function MemberProfilePage() {
             <p className="text-gray-400 text-sm mb-1">正在咨询</p>
             <p className="font-bold">{currentCoach?.name}</p>
             <p className="text-xs text-emerald-400 mt-1">● 在线</p>
-          </div>
-          <p className="text-sm text-gray-500">快捷话题</p>
-          <div className="grid grid-cols-2 gap-2">
-            {['本周训练计划调整', '饮食控制问题', '体测数据解读', '下次预约时间'].map(topic => (
-              <button key={topic} className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-sm text-left transition-colors">
-                {topic}
-              </button>
-            ))}
           </div>
           <div className="flex gap-2 pt-2">
             <input
@@ -760,7 +843,9 @@ export function MemberProfilePage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               className="w-full bg-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder-gray-400 outline-none focus:ring-1 focus:ring-emerald-500"
-              placeholder="搜索教练姓名..."
+              placeholder="搜索教练姓名或邀请码..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
@@ -772,7 +857,12 @@ export function MemberProfilePage() {
             {!coachesLoading && availableCoaches.length === 0 && (
               <div className="text-center py-8 text-gray-400 text-sm">暂无可用教练</div>
             )}
-            {!coachesLoading && availableCoaches.map(coach => (
+            {!coachesLoading && availableCoaches.length > 0 && filteredCoaches.length === 0 && (
+              <div className="text-center py-8 text-gray-400 text-sm">
+                未找到匹配"{searchQuery}"的教练
+              </div>
+            )}
+            {!coachesLoading && filteredCoaches.map(coach => (
               <button
                 key={coach.id}
                 onClick={() => setSelectedCoachId(coach.id)}
@@ -791,6 +881,9 @@ export function MemberProfilePage() {
                       <span key={tag} className="text-xs px-1.5 py-0.5 rounded-full bg-white/10 text-gray-400">{tag}</span>
                     ))}
                   </div>
+                  {coach.inviteCode && (
+                    <p className="text-xs text-gray-600 mt-0.5">ID: {coach.inviteCode}</p>
+                  )}
                 </div>
                 {selectedCoachId === coach.id && <Check className="w-5 h-5 text-emerald-400 shrink-0" />}
               </button>
@@ -800,11 +893,11 @@ export function MemberProfilePage() {
           {/* 确认绑定按钮 */}
           <button
             onClick={handleBindCoach}
-            disabled={!selectedCoachId}
-            className={`w-full py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${selectedCoachId ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-white/10 text-gray-500 cursor-not-allowed'}`}
+            disabled={!selectedCoachId || binding}
+            className={`w-full py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${selectedCoachId && !binding ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-white/10 text-gray-500 cursor-not-allowed'}`}
           >
             <Link2 className="w-5 h-5" />
-            {selectedCoachId ? `确认绑定 ${availableCoaches.find(c => c.id === selectedCoachId)?.name}` : '请选择教练'}
+            {binding ? '绑定中...' : selectedCoachId ? `确认绑定 ${availableCoaches.find(c => c.id === selectedCoachId)?.name}` : '请选择教练'}
           </button>
         </div>
       </BottomSheet>
@@ -816,7 +909,7 @@ export function MemberProfilePage() {
         onConfirm={handleUnbind}
         title="解除教练绑定"
         desc="解绑后将无法继续接收教练指导和方案推送，确定要解除绑定吗？"
-        confirmText="确认解绑"
+        confirmText={unbinding ? '解绑中...' : '确认解绑'}
         danger
       />
 

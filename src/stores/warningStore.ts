@@ -13,6 +13,7 @@ import {
   handleWarning as cloudHandleWarning,
   type IWarningRecord,
 } from '@/cloudbase/services/notifications'
+import { getCurrentUserId } from '@/cloudbase/services/utils'
 
 // ============================================================
 // 类型定义
@@ -51,11 +52,11 @@ interface WarningState {
   levelFilter: 'all' | 'danger' | 'warning'
 
   // 操作
-  fetchWarnings: () => Promise<void>
+  fetchWarnings: (coachId?: string) => Promise<void>
   setFilter: (filter: WarningState['filter']) => void
   setLevelFilter: (filter: WarningState['levelFilter']) => void
-  markAsHandled: (id: string) => Promise<void>
-  sendReminder: (id: string, message: string) => Promise<void>
+  markAsHandled: (id: string, coachId?: string) => Promise<void>
+  sendReminder: (id: string, message: string, coachId?: string) => Promise<void>
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   clearWarnings: () => void
@@ -98,12 +99,11 @@ export const useWarningStore = create<WarningState>()(
       levelFilter: 'all',
 
       // 从云数据库拉取预警数据
-      fetchWarnings: async () => {
+      fetchWarnings: async (coachId) => {
+        const id = coachId || getCurrentUserId()
         set({ isLoading: true, error: null })
         try {
-          // TODO: 替换为当前教练ID
-          const coachId = 'c001'
-          const cloudWarnings = await getCoachWarnings(coachId)
+          const cloudWarnings = await getCoachWarnings(id)
 
           if (cloudWarnings.length > 0) {
             const warnings = cloudWarnings.map(transformWarning)
@@ -126,7 +126,8 @@ export const useWarningStore = create<WarningState>()(
       setLevelFilter: (levelFilter) => set({ levelFilter }),
 
       // 标记预警为已处理（云端同步）
-      markAsHandled: async (id) => {
+      markAsHandled: async (id, coachId) => {
+        const cid = coachId || getCurrentUserId()
         // 立即更新本地
         set((state) => ({
           warnings: state.warnings.map((w) =>
@@ -136,8 +137,7 @@ export const useWarningStore = create<WarningState>()(
 
         // 同步到云端
         try {
-          const coachId = 'c001' // TODO: 替换为当前教练ID
-          await cloudHandleWarning(id, coachId)
+          await cloudHandleWarning(id, cid)
           console.log('[WarningStore] 预警已标记处理')
         } catch (err) {
           console.warn('[WarningStore] 标记已处理失败:', err)
@@ -145,15 +145,15 @@ export const useWarningStore = create<WarningState>()(
       },
 
       // 发送提醒消息（云端发送）
-      sendReminder: async (id, message) => {
+      sendReminder: async (id, message, coachId) => {
+        const cid = coachId || getCurrentUserId()
         const warning = get().warnings.find((w) => w.id === id)
         if (!warning) return
 
         try {
-          const coachId = 'c001' // TODO: 替换为当前教练ID
           const result = await sendNotification({
             userId: warning.memberId,
-            coachId,
+            coachId: cid,
             title: '教练提醒',
             content: message,
             type: 'reminder',

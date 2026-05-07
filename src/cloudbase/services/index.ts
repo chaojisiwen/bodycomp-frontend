@@ -5,6 +5,9 @@
 // 初始化
 export { initCloudbase, getApp, getAuth, getDatabase, CLOUDBASE_CONFIG, COLLECTIONS } from '../index'
 
+// 工具函数
+export { getCurrentUserId } from './utils'
+
 // 认证服务
 export {
   loginWithWechat,
@@ -16,6 +19,7 @@ export {
   getCurrentUser,
   setCurrentUser,
   isLoggedIn,
+  updateCurrentUserProfile,
 } from './auth'
 
 // 体成分服务
@@ -57,11 +61,20 @@ export {
 export {
   getCoaches,
   getCoach,
-  applyAsCoach,
   bindCoach,
   unbindCoach,
   getMyCoach,
   getCoachMembers,
+  getCoachMemberList,
+  getMemberProfile,
+  getCoachProfile,
+  updateCoachProfile,
+  assignPlan,
+  getMemberAssignedPlans,
+  saveMemberPlanNotes,
+  getMemberMeals,
+  getMemberExercises,
+  getMemberBodyRecords,
 } from './coach'
 
 // 通知服务
@@ -76,3 +89,25 @@ export {
   getCoachWarnings,
   handleWarning,
 } from './notifications'
+
+// AI 识别服务
+export {
+  recognizeFood,
+  calibrateFist,
+  calculateTotalCalories,
+  calculateTotalNutrition,
+  recognizeBodyComposition,
+  recognizeExercise,
+} from './recognize'
+export type {
+  FistCalibration,
+  RecognizedFoodItem,
+  RecognizeAnalysis,
+  RecognizeResult,
+  AIConfig,
+  FistCalibrationResult,
+  BodyCompositionResult,
+  BodyRecognizeResult,
+  ExerciseItemResult,
+  ExerciseRecognizeResult,
+} from './recognize'

@@ -1,6 +1,20 @@
 import { useState, useEffect } from 'react'
 import { getApp, COLLECTIONS } from '@/cloudbase/services'
-import type { Member } from '@/services/api'
+
+// 教练首页使用的会员信息类型
+interface DashboardMember {
+  id: string
+  name: string
+  warnings: number
+  hasPlan: boolean
+  lastRecord: string
+  goal?: string
+  weight?: number
+  bodyFat?: number
+  week?: number
+  joinDate?: string
+  avatar?: string
+}
 
 // ────────────────────────────
 // Types
@@ -40,7 +54,7 @@ export interface CheckinPhoto {
 // useTodayTasks — 计算今日待回访/待出计划/未打卡数量
 // ────────────────────────────
 
-export function useTodayTasks(members: Member[]) {
+export function useTodayTasks(members: DashboardMember[]) {
   const today = new Date().toISOString().split('T')[0]
 
   const pendingFollowup = members.filter(m => m.warnings > 0).length
@@ -57,7 +71,7 @@ export function useTodayTasks(members: Member[]) {
 // useWeekStats — 本周活跃率、日统计
 // ────────────────────────────
 
-export function useWeekStats(members: Member[]) {
+export function useWeekStats(members: DashboardMember[]) {
   const today = new Date()
   const weekAgo = new Date(today)
   weekAgo.setDate(weekAgo.getDate() - 7)
@@ -93,7 +107,7 @@ export function useWeekStats(members: Member[]) {
 // useWarnings — 生成预警卡片数据
 // ────────────────────────────
 
-export function useWarnings(members: Member[]) {
+export function useWarnings(members: DashboardMember[]) {
   const warnings: WarningCard[] = []
 
   // 严重：warnings > 0 的会员
@@ -239,7 +253,7 @@ export async function fetchRealCheckins(memberIds: string[]): Promise<CheckinPho
 // useRecentCheckins — 最新打卡数据
 // ────────────────────────────
 
-export function useRecentCheckins(members: Member[]) {
+export function useRecentCheckins(members: DashboardMember[]) {
   const [photos, setPhotos] = useState<CheckinPhoto[]>([])
 
   useEffect(() => {

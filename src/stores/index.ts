@@ -7,6 +7,6 @@ export { useMealStore, useTodayCalories, useTodayMealsByType, useWeekCalories } 
 export { useExerciseStore, useTodayDuration, useTodayCaloriesBurned, useWeekExerciseStats } from './exerciseStore'
 export { useRecognizeStore, useTodayRecognitionCount, useLatestRecognition, type RecognizedFoodItem, type RecognitionRecord, type RecognizeAnalysis } from './recognizeStore'
 export { useNotificationStore, type Notification } from './notificationStore'
-export { useProfileStore, useDisplayName, useAvatarText } from './profileStore'
+export { useProfileStore } from './profileStore'
 export { useWarningStore, useFilteredWarnings, useWarningStats } from './warningStore'
 export { usePlanStore, useFilteredPlans, usePlanCountByType } from './planStore'

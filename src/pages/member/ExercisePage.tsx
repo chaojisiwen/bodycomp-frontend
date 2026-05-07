@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Flame, Clock, Target, Search, X, Camera, Upload, TrendingUp, BarChart3, Heart } from 'lucide-react'
+import { Plus, Flame, Clock, Target, Search, X, Camera, TrendingUp, BarChart3, Heart } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { useExerciseStore, useTodayDuration, useTodayCaloriesBurned } from '@/stores/exerciseStore'
 import { useAuth } from '@/contexts/AuthContext'
@@ -8,7 +8,7 @@ import { useProfileStore } from '@/stores'
 import { usePlanTarget } from '@/stores/planStore'
 import { BarChart } from '@/components/ui/RingChart'
 import type { IExerciseItem } from '@/cloudbase/types'
-import { recognizeExercise } from '@/cloudbase/services/recognizeApi'
+import { recognizeExercise } from '@/cloudbase/services/recognize'
 
 interface ExerciseRecord {
   id: string
@@ -135,7 +135,6 @@ export function ExercisePage() {
   const [customExercise, setCustomExercise] = useState({ name: '', caloriesPerMinute: '' })
 
   // AI拍照识别运动报告
-  const [showAIModal, setShowAIModal] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [aiResult, setAiResult] = useState<ExerciseRecord[] | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -306,7 +305,6 @@ export function ExercisePage() {
     if (!file) return
 
     setIsAnalyzing(true)
-    setShowAIModal(false)
 
     try {
       // 将图片转换为 base64
@@ -358,23 +356,6 @@ export function ExercisePage() {
     }
   }
 
-  // 启动摄像头
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-      }
-      setShowCameraView(true)
-    } catch (error) {
-      console.error('[ExercisePage] 无法访问摄像头:', error)
-      alert('无法访问摄像头，请确保已授权相机权限')
-    }
-  }
-
   // 停止摄像头
   const stopCamera = () => {
     if (streamRef.current) {
@@ -390,7 +371,6 @@ export function ExercisePage() {
 
     setIsAnalyzing(true)
     stopCamera()
-    setShowAIModal(false)
 
     try {
       // 从 video 元素捕获画面
@@ -606,6 +586,19 @@ export function ExercisePage() {
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
           <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full flex flex-col items-center gap-2"
+          >
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <Camera className="w-6 h-6 text-white" />
+            </div>
+            <p className="font-semibold text-sm">相册导入</p>
+            <p className="text-xs text-gray-400">从相册选择图片</p>
+          </button>
+        </Card>
+
+        <Card className="p-4">
+          <button
             onClick={() => setShowAddModal(true)}
             className="w-full flex flex-col items-center gap-2"
           >
@@ -614,19 +607,6 @@ export function ExercisePage() {
             </div>
             <p className="font-semibold text-sm">记录运动</p>
             <p className="text-xs text-gray-400">添加运动</p>
-          </button>
-        </Card>
-
-        <Card className="p-4">
-          <button
-            onClick={() => setShowAIModal(true)}
-            className="w-full flex flex-col items-center gap-2"
-          >
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-              <Camera className="w-6 h-6 text-white" />
-            </div>
-            <p className="font-semibold text-sm">AI识别</p>
-            <p className="text-xs text-gray-400">拍照导入报告</p>
           </button>
         </Card>
       </div>
@@ -911,78 +891,14 @@ export function ExercisePage() {
         </div>
       )}
 
-      {/* AI拍照识别运动报告弹窗 */}
-      {showAIModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end pb-[144px]">
-          <div className="w-full bg-gray-900 rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto">
-            <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-6" />
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold">AI识别运动报告</h3>
-              <button onClick={() => setShowAIModal(false)} className="text-gray-400">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <p className="text-sm text-gray-400 mb-4">
-              拍摄或上传 Apple Health、华为健康、小米运动、佳明、Polar 等设备/APP 的运动报告截图，AI将自动识别并提取运动数据
-            </p>
-
-            {/* 隐藏的文件输入 */}
-            <input
-              type="file"
-              accept="image/*"
-              ref={fileInputRef}
-              onChange={handleImageUpload}
-              className="hidden"
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* 拍照 */}
-              <button
-                onClick={startCamera}
-                className="flex flex-col items-center gap-3 p-6 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
-              >
-                <div className="w-16 h-16 rounded-full bg-purple-500/30 flex items-center justify-center">
-                  <Camera className="w-8 h-8 text-purple-400" />
-                </div>
-                <span className="font-medium">拍照识别</span>
-                <span className="text-xs text-gray-400">使用相机拍摄</span>
-              </button>
-
-              {/* 从相册选择 */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex flex-col items-center gap-3 p-6 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
-              >
-                <div className="w-16 h-16 rounded-full bg-pink-500/30 flex items-center justify-center">
-                  <Upload className="w-8 h-8 text-pink-400" />
-                </div>
-                <span className="font-medium">相册导入</span>
-                <span className="text-xs text-gray-400">选择已有图片</span>
-              </button>
-            </div>
-
-            {/* 支持的品牌 */}
-            <div className="mt-6 p-4 bg-white/5 rounded-xl">
-              <p className="text-sm text-gray-400 mb-3">支持的设备/APP：</p>
-              <div className="flex flex-wrap gap-2">
-                {['Apple Health', '华为健康', '小米运动', '佳明 Connect', 'Polar Flow', 'Keep', '悦跑圈', '咕咚'].map(brand => (
-                  <span key={brand} className="px-3 py-1 bg-white/10 rounded-full text-xs text-gray-300">
-                    {brand}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowAIModal(false)}
-              className="w-full mt-4 py-3 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      )}
+      {/* 隐藏的文件输入 */}
+      <input
+        type="file"
+        accept="image/*"
+        ref={fileInputRef}
+        onChange={handleImageUpload}
+        className="hidden"
+      />
 
       {/* AI识别加载中 */}
       {isAnalyzing && (

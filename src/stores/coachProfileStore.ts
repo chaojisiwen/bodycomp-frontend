@@ -10,6 +10,7 @@ import { persist } from 'zustand/middleware'
 import { getCoach } from '@/cloudbase/services/coach'
 import { getCoachMembers } from '@/cloudbase/services/coach'
 import type { ICoach } from '@/cloudbase/types'
+import { getCurrentUserId } from '@/cloudbase/services/utils'
 
 // ============================================================
 // 类型定义
@@ -79,7 +80,7 @@ export const useCoachProfileStore = create<CoachProfileState>()(
 
         try {
           // 如果没有传入 userId，尝试从 localStorage 获取
-          const coachId = userId || localStorage.getItem('coach_id') || 'c001'
+          const coachId = userId || localStorage.getItem('coach_id') || getCurrentUserId()
 
           // 并行获取教练信息和会员列表
           const [coachData, membersData] = await Promise.all([
@@ -88,9 +89,15 @@ export const useCoachProfileStore = create<CoachProfileState>()(
           ])
 
           if (coachData) {
+            // 获取当前 state（persist 可能已恢复本地数据）
+            const currentState = useCoachProfileStore.getState()
+
             const profile: CoachProfile = {
               id: coachId,
-              name: (coachData as ICoach & { name?: string }).name || coachData.title || '教练',
+              // name: 用户编辑过则保留本地（非默认值'教练'），否则用云端值
+              name: currentState.profile?.name && currentState.profile.name !== '教练'
+                ? currentState.profile.name
+                : ((coachData as ICoach & { name?: string }).name || coachData.title || '教练'),
               avatar: (coachData as ICoach).avatar,
               phone: '', // 敏感信息不存储
               title: coachData.title,

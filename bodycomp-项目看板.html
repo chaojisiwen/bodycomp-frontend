@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bodycomp-frontend 项目看板</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0f172a;--bg2:#1e293b;--bg3:#334155;
+--text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+--green:#22c55e;--green-bg:rgba(34,197,94,.12);
+--yellow:#eab308;--yellow-bg:rgba(234,179,8,.12);
+--red:#ef4444;--red-bg:rgba(239,68,68,.12);
+--blue:#3b82f6;--blue-bg:rgba(59,130,246,.12);
+--purple:#a78bfa;--purple-bg:rgba(167,139,250,.12);
+--orange:#f97316;--orange-bg:rgba(249,115,22,.12);
+--gray:#64748b;--gray-bg:rgba(100,116,139,.12);
+--teal:#2dd4bf;--teal-bg:rgba(45,212,191,.12);
+--radius:12px;--radius-sm:8px;
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;line-height:1.6;overflow-x:hidden}
+.toolbar{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid rgba(148,163,184,.15);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(12px);gap:12px;flex-wrap:wrap}
+.toolbar h1{font-size:18px;font-weight:600;white-space:nowrap}
+.toolbar h1 span{color:var(--blue);font-weight:400;font-size:13px;margin-left:8px}
+.toolbar .meta{display:flex;gap:16px;color:var(--text2);font-size:12px;flex-wrap:wrap}
+.toolbar .meta span{display:flex;align-items:center;gap:4px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-green{background:var(--green-bg);color:var(--green)}
+.badge-yellow{background:var(--yellow-bg);color:var(--yellow)}
+.badge-red{background:var(--red-bg);color:var(--red)}
+.badge-blue{background:var(--blue-bg);color:var(--blue)}
+.badge-gray{background:var(--gray-bg);color:var(--gray)}
+.tabs{display:flex;gap:4px;padding:12px 24px;background:var(--bg);border-bottom:1px solid rgba(148,163,184,.1);overflow-x:auto}
+.tab{padding:8px 18px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--text2);transition:all .2s;border:1px solid transparent;white-space:nowrap;user-select:none}
+.tab:hover{color:var(--text);background:var(--bg2)}
+.tab.active{background:var(--blue-bg);color:var(--blue);border-color:rgba(59,130,246,.3);font-weight:500}
+.content{padding:20px 24px;max-width:1400px;margin:0 auto}
+.panel{display:none}
+.panel.active{display:block}
+.section-title{font-size:15px;font-weight:600;margin:24px 0 12px;color:var(--text);display:flex;align-items:center;gap:8px}
+.section-title:first-child{margin-top:0}
+.section-title .count{font-size:11px;color:var(--text3);font-weight:400}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot-green{background:var(--green)}
+.dot-yellow{background:var(--yellow)}
+.dot-red{background:var(--red)}
+.dot-gray{background:var(--gray)}
+.card{background:var(--bg2);border:1px solid rgba(148,163,184,.1);border-radius:var(--radius);padding:16px;margin-bottom:8px;transition:all .2s}
+.card:hover{border-color:rgba(148,163,184,.25)}
+.card.highlight{border-color:var(--blue);box-shadow:0 0 0 1px rgba(59,130,246,.2)}
+.card-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.card-name{font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-path{font-size:11px;color:var(--text3);font-family:monospace;white-space:nowrap}
+.card-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.card-lines{font-size:11px;color:var(--text3);background:var(--bg3);padding:2px 6px;border-radius:4px;min-width:40px;text-align:center}
+.card-source{font-size:10px;color:var(--text3);background:var(--bg3);padding:2px 6px;border-radius:4px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-issue{font-size:11px;color:var(--yellow);margin-top:6px;padding-left:18px}
+.group-label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;padding:8px 0 4px;display:flex;align-items:center;gap:6px}
+.module-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.module-card{background:var(--bg2);border:1px solid rgba(148,163,184,.1);border-radius:var(--radius);padding:14px;transition:all .2s;cursor:default}
+.module-card:hover{border-color:rgba(148,163,184,.25)}
+.module-card.highlight{border-color:var(--blue);box-shadow:0 0 0 1px rgba(59,130,246,.2)}
+.module-name{font-weight:500;font-size:13px;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.module-desc{font-size:11px;color:var(--text3);margin-bottom:8px}
+.module-bar{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.module-bar-fill{height:100%;border-radius:2px;transition:width .4s ease}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--bg2);border:1px solid rgba(148,163,184,.1);border-radius:var(--radius);padding:14px 16px}
+.stat-label{font-size:11px;color:var(--text3);margin-bottom:4px}
+.stat-value{font-size:22px;font-weight:600}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.issue-p0,.issue-p1,.issue-p2{margin-bottom:16px}
+.issue-card{background:var(--bg2);border:1px solid rgba(148,163,184,.1);border-radius:var(--radius);padding:14px;margin-bottom:8px;border-left:3px solid var(--gray)}
+.issue-p0 .issue-card{border-left-color:var(--red)}
+.issue-p1 .issue-card{border-left-color:var(--yellow)}
+.issue-p2 .issue-card{border-left-color:var(--blue)}
+.issue-title{font-weight:500;font-size:13px;margin-bottom:4px}
+.issue-file{font-size:11px;color:var(--text3);font-family:monospace}
+.issue-fix{font-size:11px;color:var(--text2);margin-top:6px;padding:6px 10px;background:var(--bg3);border-radius:var(--radius-sm)}
+.issue-detail{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.issue-card.expanded .issue-detail{max-height:200px}
+.timeline{position:relative;padding-left:32px;margin:24px 0}
+.timeline::before{content:'';position:absolute;left:11px;top:0;bottom:0;width:2px;background:var(--bg3)}
+.timeline-item{position:relative;margin-bottom:28px}
+.timeline-dot{position:absolute;left:-32px;top:4px;width:22px;height:22px;border-radius:50%;border:2px solid var(--bg3);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;z-index:1}
+.timeline-item.done .timeline-dot{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.timeline-item.current .timeline-dot{border-color:var(--blue);background:var(--blue-bg);color:var(--blue);animation:pulse 2s infinite}
+.timeline-item.pending .timeline-dot{border-color:var(--text3);color:var(--text3)}
+.timeline-title{font-weight:600;font-size:14px;margin-bottom:2px}
+.timeline-target{font-size:12px;color:var(--text2);margin-bottom:8px}
+.timeline-tasks{display:flex;flex-direction:column;gap:4px}
+.timeline-task{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px}
+.timeline-task .check{color:var(--green)}
+.timeline-task .pending-check{color:var(--text3)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(59,130,246,.3)}50%{box-shadow:0 0 0 6px rgba(59,130,246,0)}}
+.arch-layer{margin-bottom:16px}
+.arch-layer-header{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg2);border:1px solid rgba(148,163,184,.1);border-radius:var(--radius-sm) var(--radius-sm) 0 0;font-size:13px;font-weight:500}
+.arch-layer-header .help-btn{margin-left:auto;width:20px;height:20px;border-radius:50%;background:var(--bg3);color:var(--text3);font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;border:none;line-height:1}
+.arch-layer-header .help-btn:hover{background:var(--blue-bg);color:var(--blue)}
+.arch-layer-body{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;padding:10px;background:rgba(30,41,59,.5);border:1px solid rgba(148,163,184,.1);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm)}
+.arch-item{padding:8px 12px;border-radius:var(--radius-sm);font-size:12px;background:var(--bg2);border:1px solid rgba(148,163,184,.08);transition:all .2s;cursor:default}
+.arch-item:hover{border-color:rgba(148,163,184,.25)}
+.arch-item.highlight{border-color:var(--blue);background:var(--blue-bg)}
+.arch-item .arch-lines{font-size:10px;color:var(--text3)}
+.tooltip{position:fixed;background:var(--bg2);border:1px solid rgba(148,163,184,.3);border-radius:var(--radius-sm);padding:12px 16px;font-size:12px;color:var(--text);max-width:280px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.4);display:none;line-height:1.5}
+.tooltip.show{display:block}
+.tooltip strong{color:var(--blue);display:block;margin-bottom:4px}
+.dep-info{font-size:11px;color:var(--text3);margin-top:6px;padding-left:18px}
+.dep-info span{margin-right:12px}
+@media(max-width:640px){
+.toolbar{padding:12px 16px}
+.content{padding:12px 16px}
+.tabs{padding:8px 16px}
+.stat-grid{grid-template-columns:repeat(2,1fr)}
+.module-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+<h1>bodycomp-frontend <span>项目看板</span></h1>
+<div class="meta">
+<span>v0.0.0</span>
+<span>22,000 行代码</span>
+<span>16 个页面</span>
+<span>10 个 Store</span>
+<span>3 个测试</span>
+<span>最近更新: 2026-05-05</span>
+</div>
+</div>
+
+<div class="tabs" id="tabs">
+<div class="tab active" data-tab="pages">页面清单</div>
+<div class="tab" data-tab="arch">模块架构</div>
+<div class="tab" data-tab="issues">问题看板</div>
+<div class="tab" data-tab="roadmap">迭代规划</div>
+</div>
+
+<div class="content">
+<div id="panel-pages" class="panel active">
+<div class="stat-grid" id="page-stats"></div>
+<div id="page-list"></div>
+</div>
+
+<div id="panel-arch" class="panel">
+<div class="stat-grid" id="arch-stats"></div>
+<div id="arch-layers"></div>
+</div>
+
+<div id="panel-issues" class="panel">
+<div class="stat-grid" id="issue-stats"></div>
+<div class="issue-p0" id="issue-p0"></div>
+<div class="issue-p1" id="issue-p1"></div>
+<div class="issue-p2" id="issue-p2"></div>
+</div>
+
+<div id="panel-roadmap" class="panel">
+<div class="timeline" id="timeline"></div>
+</div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const DATA={
+pages:[
+{id:'login',name:'登录页',path:'/login',file:'LoginPage.tsx',lines:537,group:'public',status:'complete',source:'cloudbase-auth',desc:'用户登录，支持微信/手机号'},
+{id:'member-home',name:'会员首页',path:'/member',file:'member/HomePage.tsx',lines:462,group:'member',status:'complete',source:'all-stores',desc:'今日摄入/运动/目标概览'},
+{id:'member-intake',name:'饮食录入',path:'/member/intake',file:'member/IntakePage.tsx',lines:722,group:'member',status:'complete',source:'mealStore',desc:'每日三餐饮食记录'},
+{id:'member-exercise',name:'运动记录',path:'/member/exercise',file:'member/ExercisePage.tsx',lines:1136,group:'member',status:'needs-optimization',source:'exerciseStore',desc:'运动打卡与历史',issue:'1136行需拆分'},
+{id:'member-recognize',name:'AI 食物识别',path:'/member/recognize',file:'member/RecognizePage.tsx',lines:978,group:'member',status:'needs-optimization',source:'hunyuan-aiProxy',desc:'拍照/选图识别食物热量',issue:'百度识别代理路径不通'},
+{id:'member-body',name:'体成分数据',path:'/member/body-data',file:'member/MyBodyDataPage.tsx',lines:1075,group:'member',status:'needs-optimization',source:'bodyStore',desc:'体测数据管理与趋势图表',issue:'1075行需拆分'},
+{id:'member-profile',name:'个人资料',path:'/member/profile',file:'member/MemberProfilePage.tsx',lines:899,group:'member',status:'complete',source:'profileStore',desc:'头像/昵称/身体参数设置'},
+{id:'member-plans',name:'我的计划',path:'/member/plans',file:'member/MyPlansPage.tsx',lines:339,group:'member',status:'complete',source:'assignedPlanStore',desc:'教练分配的训练/饮食方案'},
+{id:'member-messages',name:'消息中心',path:'/member/messages',file:'member/MemberMessagesPage.tsx',lines:398,group:'member',status:'needs-optimization',source:'notifications-api',desc:'教练消息与互动',issue:'reaction 云端同步待优化'},
+{id:'coach-home',name:'教练首页',path:'/coach',file:'coach/HomePage.tsx',lines:314,group:'coach',status:'complete',source:'coachApi',desc:'会员概览与快捷入口'},
+{id:'coach-members',name:'会员列表',path:'/coach/members',file:'coach/CoachMemberListPage.tsx',lines:227,group:'coach',status:'complete',source:'coachApi',desc:'查看管理所有会员'},
+{id:'coach-detail',name:'会员详情',path:'/coach/members/:id',file:'coach/CoachMemberDetailPage.tsx',lines:1263,group:'coach',status:'needs-refactor',source:'coachApi',desc:'会员体成分/饮食/运动详情',issue:'1263行急需拆分'},
+{id:'coach-warnings',name:'预警中心',path:'/coach/warnings',file:'coach/WarningCenterPage.tsx',lines:257,group:'coach',status:'complete',source:'warningStore',desc:'会员异常数据预警'},
+{id:'coach-plans',name:'方案库',path:'/coach/plans',file:'coach/PlanLibraryPage.tsx',lines:853,group:'coach',status:'needs-optimization',source:'planStore',desc:'训练/饮食方案创建与管理',issue:'planStore 6处 TODO 待实现'},
+{id:'coach-profile',name:'教练资料',path:'/coach/profile',file:'coach/CoachProfilePage.tsx',lines:315,group:'coach',status:'complete',source:'coachProfileStore',desc:'教练个人信息编辑'},
+{id:'coach-notifications',name:'通知中心',path:'/coach/notifications',file:'coach/NotificationCenterPage.tsx',lines:131,group:'coach',status:'basic',source:'pending',desc:'系统通知查看',issue:'功能单薄，仅基础列表'}
+],
+stores:[
+{name:'mealStore',lines:260,desc:'饮食记录管理',pages:['member-intake','member-home']},
+{name:'exerciseStore',lines:195,desc:'运动记录管理',pages:['member-exercise','member-home']},
+{name:'bodyStore',lines:171,desc:'体成分数据管理',pages:['member-body','coach-detail']},
+{name:'recognizeStore',lines:119,desc:'AI 识别状态管理',pages:['member-recognize']},
+{name:'profileStore',lines:172,desc:'用户资料管理',pages:['member-profile','login']},
+{name:'planStore',lines:397,desc:'训练方案管理（6处 TODO）',pages:['coach-plans','member-plans']},
+{name:'warningStore',lines:229,desc:'预警提醒管理',pages:['coach-warnings','coach-home']},
+{name:'coachProfileStore',lines:158,desc:'教练资料管理',pages:['coach-profile']},
+{name:'assignedPlanStore',lines:54,desc:'已分配计划查看',pages:['member-plans']},
+{name:'notificationStore',lines:160,desc:'通知消息管理',pages:['member-messages','coach-notifications']}
+],
+services:[
+{name:'api.ts',lines:677,desc:'统一 API 入口 + Mock HTTP fallback'},
+{name:'auth',lines:412,desc:'用户认证（微信/手机号）'},
+{name:'coach',lines:522,desc:'教练业务 API'},
+{name:'meals',lines:289,desc:'饮食 CRUD'},
+{name:'exercises',lines:281,desc:'运动 CRUD'},
+{name:'bodyRecords',lines:176,desc:'体成分记录'},
+{name:'recognize (11 子模块)',lines:2024,desc:'AI 识别调度（混元/智谱/Gemini/百度/投票/Mock）'},
+{name:'notifications',lines:308,desc:'消息通知'}
+],
+components:[
+{name:'GoalProgressCard',lines:366,desc:'目标进度卡片'},
+{name:'TrendChart',lines:203,desc:'趋势图表'},
+{name:'MobileLayout',lines:170,desc:'移动端布局框架'},
+{name:'Modal',lines:137,desc:'通用弹窗'},
+{name:'RingChart',lines:132,desc:'环形图表'},
+{name:'Loading',lines:132,desc:'加载动画'},
+{name:'BodyMetricCard / Grid / List',lines:210,desc:'体测数据展示组件组'},
+{name:'CoachMessage',lines:100,desc:'教练消息气泡'},
+{name:'WarningCard',lines:62,desc:'预警卡片'},
+{name:'其他 UI (button/card/progress)',lines:200,desc:'基础 UI 组件'}
+],
+issues:{
+p0:[],
+p1:[
+{title:'CoachMemberDetailPage 1263 行需要拆分',file:'src/pages/coach/CoachMemberDetailPage.tsx',fix:'拆分为 Overview / DietTab / ExerciseTab / BodyTab 4 个子组件，主文件控制在 300 行以内',tags:['重构','高优先级']},
+{title:'planStore 6 处 TODO 未实现',file:'src/stores/planStore.ts (L222,L226,L257,L276,L291,L318)',fix:'需要后端先创建对应云函数，前端接入新 API 替换 Mock 数据',tags:['后端依赖','功能缺失']},
+{title:'百度食物识别代理路径不通',file:'src/cloudbase/services/recognize/baidu-recognition.ts',fix:'修复 COS 代理路由配置，确保 /api/baidu 请求正确转发到百度服务',tags:['Bug','AI识别']},
+{title:'目标进度反馈功能缺失',file:'src/components/GoalProgressCard.tsx',fix:'接入 planStore 数据，展示会员对训练方案的完成度与趋势',tags:['功能缺失','会员体验']}
+],
+p2:[
+{title:'缺少 ESLint / Prettier 代码规范',file:'项目根目录',fix:'配置 eslint + prettier，添加 pre-commit hook 强制格式化',tags:['工程化']},
+{title:'RingChart / NutritionProgress 数据边界校验缺失',file:'src/components/ui/RingChart.tsx, NutritionProgress.tsx',fix:'添加百分比 clamp（0-100），空数据处理（显示占位而非 NaN）',tags:['健壮性']},
+{title:'COS 上残留旧版本 hash 文件',file:'deploy 脚本',fix:'部署脚本添加清理步骤，删除非当前版本的 hash 文件',tags:['运维']},
+{title:'NotificationCenterPage 功能单薄',file:'src/pages/coach/NotificationCenterPage.tsx',fix:'增加已读/未读标记、批量操作、通知分类筛选',tags:['体验优化']},
+{title:'MemberMessagesPage reaction 云端同步优化',file:'src/pages/member/MemberMessagesPage.tsx (L157)',fix:'将 reaction 状态持久化到云端数据库，避免刷新丢失',tags:['体验优化']}
+]
+},
+roadmap:[
+{phase:'Phase 1: 基础搭建',status:'done',target:'2026-04-20',tasks:['技术栈搭建（Vite + React + TS + Tailwind）','CloudBase 接入与认证','基础路由与布局框架','UI 组件库搭建']},
+{phase:'Phase 2: 会员核心功能',status:'done',target:'2026-04-30',tasks:['饮食录入与管理（mealStore + IntakePage）','运动记录（exerciseStore + ExercisePage）','体成分数据（bodyStore + MyBodyDataPage）','个人资料编辑','AI 食物识别（多模型投票）']},
+{phase:'Phase 3: 教练端与联调',status:'current',target:'2026-05-15',tasks:['教练首页与会员列表','会员详情页','方案库与计划分配','预警中心','消息/通知双向互通','Vercel + COS 部署联调']},
+{phase:'Phase 4: 优化与上线',status:'pending',target:'2026-05-30',tasks:['大文件拆分重构','代码规范（ESLint/Prettier）','PWA 离线支持完善','性能优化与测试覆盖','正式域名上线']}
+]
+};
+
+const STATUS_MAP={complete:{label:'完成',color:'green',dot:'dot-green'},'needs-optimization':{label:'需优化',color:'yellow',dot:'dot-yellow'},'needs-refactor':{label:'需重构',color:'red',dot:'dot-red'},basic:{label:'基础',color:'gray',dot:'dot-gray'},'not-started':{label:'未开始',color:'gray',dot:'dot-gray'}};
+
+function renderStats(){
+const pages=DATA.pages;
+const done=pages.filter(p=>p.status==='complete').length;
+const opt=pages.filter(p=>p.status==='needs-optimization').length;
+const ref=pages.filter(p=>p.status==='needs-refactor').length;
+const basic=pages.filter(p=>p.status==='basic').length;
+document.getElementById('page-stats').innerHTML=`
+<div class="stat-card"><div class="stat-label">页面总数</div><div class="stat-value">${pages.length}</div><div class="stat-sub">1 公共 + 9 会员 + 6 教练</div></div>
+<div class="stat-card"><div class="stat-label">已完成</div><div class="stat-value" style="color:var(--green)">${done}</div><div class="stat-sub">${Math.round(done/pages.length*100)}% 完成率</div></div>
+<div class="stat-card"><div class="stat-label">需优化</div><div class="stat-value" style="color:var(--yellow)">${opt}</div><div class="stat-sub">可用但有改进空间</div></div>
+<div class="stat-card"><div class="stat-label">需重构/问题</div><div class="stat-value" style="color:var(--red)">${ref+basic}</div><div class="stat-sub">1 重构 + 1 基础</div></div>`;
+document.getElementById('arch-stats').innerHTML=`
+<div class="stat-card"><div class="stat-label">Store 总数</div><div class="stat-value">${DATA.stores.length}</div><div class="stat-sub">1,917 行状态管理代码</div></div>
+<div class="stat-card"><div class="stat-label">服务层</div><div class="stat-value">${DATA.services.length}</div><div class="stat-sub">4,689 行（含 AI 识别）</div></div>
+<div class="stat-card"><div class="stat-label">组件</div><div class="stat-value">${DATA.components.length}+</div><div class="stat-sub">2,687 行可复用组件</div></div>
+<div class="stat-card"><div class="stat-label">总代码量</div><div class="stat-value">22K</div><div class="stat-sub">TypeScript + React</div></div>`;
+const p0=DATA.issues.p0.length,p1=DATA.issues.p1.length,p2=DATA.issues.p2.length;
+document.getElementById('issue-stats').innerHTML=`
+<div class="stat-card"><div class="stat-label">P0 紧急问题</div><div class="stat-value" style="color:var(--green)">${p0}</div><div class="stat-sub">无阻塞性问题</div></div>
+<div class="stat-card"><div class="stat-label">P1 尽快处理</div><div class="stat-value" style="color:var(--yellow)">${p1}</div><div class="stat-sub">影响功能完整性</div></div>
+<div class="stat-card"><div class="stat-label">P2 有空再弄</div><div class="stat-value" style="color:var(--blue)">${p2}</div><div class="stat-sub">锦上添花</div></div>
+<div class="stat-card"><div class="stat-label">TODO 标记</div><div class="stat-value">7</div><div class="stat-sub">planStore 6 + messages 1</div></div>`;
+}
+
+function renderPages(){
+const groups={public:{label:'公共模块',icon:'P',color:'blue'},member:{label:'会员端',icon:'M',color:'purple'},coach:{label:'教练端',icon:'C',color:'teal'}};
+let html='';
+for(const[gk,gv] of Object.entries(groups)){
+const items=DATA.pages.filter(p=>p.group===gk);
+html+=`<div class="group-label"><span style="color:var(--${gv.color})">${gv.icon}</span> ${gv.label} <span class="count">${items.length} 页</span></div>`;
+for(const p of items){
+const s=STATUS_MAP[p.status];
+html+=`<div class="card" data-page-id="${p.id}" onclick="highlightDeps('${p.id}')">
+<div class="card-row">
+<div class="card-left">
+<span class="dot ${s.dot}"></span>
+<span class="card-name">${p.name}</span>
+<span class="card-path">${p.path}</span>
+</div>
+<div class="card-right">
+<span class="card-source" title="${p.source}">${p.source}</span>
+<span class="card-lines">${p.lines} 行</span>
+<span class="badge badge-${s.color}">${s.label}</span>
+</div>
+</div>
+${p.issue?`<div class="card-issue">${p.issue}</div>`:''}
+${p.desc?`<div class="dep-info">${p.desc}</div>`:''}
+</div>`;
+}
+}
+document.getElementById('page-list').innerHTML=html;
+}
+
+function renderArch(){
+const layers=[
+{id:'presentation',label:'展示层',help:'展示层就是用户看到的所有页面，每个页面对应手机上一个屏幕',color:'purple',items:DATA.pages.map(p=>({name:p.file.replace('.tsx',''),lines:p.lines,id:p.id,status:p.status}))},
+{id:'components',label:'组件层',help:'组件层是可复用的积木块，多个页面共用同一个组件',color:'teal',items:DATA.components.map(c=>({name:c.name,lines:c.lines,desc:c.desc}))},
+{id:'state',label:'状态层 (Store)',help:'Store 就是"数据抽屉"，每个功能模块都有自己的数据抽屉来存数据和处理业务逻辑',color:'orange',items:DATA.stores.map(s=>({name:s.name,lines:s.lines,desc:s.desc}))},
+{id:'service',label:'服务层',help:'服务层负责跟"外面"打交道——登录验证、存取数据、调用 AI 识别等',color:'blue',items:DATA.services.map(s=>({name:s.name,lines:s.lines,desc:s.desc}))},
+{id:'infra',label:'基础设施',help:'基础设施是项目的"地基"——CloudBase 云开发提供数据库和登录，HashRouter 管理页面跳转，PWA 让应用可以离线使用',color:'gray',items:[{name:'CloudBase (腾讯云开发)',desc:'数据库 + 云函数 + 认证'},{name:'HashRouter',desc:'页面路由管理'},{name:'PWA + Service Worker',desc:'离线缓存支持'},{name:'COS + CDN',desc:'静态资源托管与加速'}]}
+];
+let html='';
+for(const layer of layers){
+html+=`<div class="arch-layer" id="layer-${layer.id}">
+<div class="arch-layer-header">
+<span style="color:var(--${layer.color})">${layer.label}</span>
+<span class="count">${layer.items.length} 模块</span>
+<button class="help-btn" onclick="event.stopPropagation();showHelp(event,'${layer.label}',\`${layer.help}\`)">?</button>
+</div>
+<div class="arch-layer-body">`;
+for(const item of layer.items){
+html+=`<div class="arch-item" data-arch-id="${item.id||''}">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<span style="font-weight:500">${item.name}</span>
+${item.lines?`<span class="arch-lines">${item.lines} 行</span>`:''}
+</div>
+${item.desc?`<div style="font-size:10px;color:var(--text3);margin-top:3px">${item.desc}</div>`:''}
+${item.status?`<span class="badge badge-${STATUS_MAP[item.status]?.color||'gray'}" style="margin-top:4px;font-size:10px">${STATUS_MAP[item.status]?.label||''}</span>`:''}
+</div>`;
+}
+html+=`</div></div>`;
+}
+document.getElementById('arch-layers').innerHTML=html;
+}
+
+function renderIssues(){
+function renderGroup(container,issues,level){
+if(!issues.length){document.getElementById(container).innerHTML=`<div style="padding:12px;color:var(--text3);font-size:12px">暂无 ${level} 级问题</div>`;return;}
+let html='';
+for(let i=0;i<issues.length;i++){
+const iss=issues[i];
+html+=`<div class="issue-card" onclick="this.classList.toggle('expanded')">
+<div class="issue-title">${i+1}. ${iss.title}</div>
+<div class="issue-file">${iss.file}</div>
+<div style="display:flex;gap:4px;margin-top:4px">${(iss.tags||[]).map(t=>`<span class="badge badge-gray">${t}</span>`).join('')}</div>
+<div class="issue-detail"><div class="issue-fix">修复建议: ${iss.fix}</div></div>
+</div>`;
+}
+document.getElementById(container).innerHTML=`<div class="section-title">${level==='P0'?'🔴':'🟡'} ${level} 级问题 <span class="count">${issues.length} 项</span></div>`+html;
+}
+renderGroup('issue-p0',DATA.issues.p0,'P0');
+renderGroup('issue-p1',DATA.issues.p1,'P1');
+renderGroup('issue-p2',DATA.issues.p2,'P2');
+}
+
+function renderRoadmap(){
+let html='';
+for(const phase of DATA.roadmap){
+const cls=phase.status==='done'?'done':phase.status==='current'?'current':'pending';
+const icon=phase.status==='done'?'✓':phase.status==='current'?'→':'○';
+html+=`<div class="timeline-item ${cls}">
+<div class="timeline-dot">${icon}</div>
+<div class="timeline-title">${phase.phase}</div>
+<div class="timeline-target">目标: ${phase.target}</div>
+<div class="timeline-tasks">${phase.tasks.map(t=>{
+const isDone=phase.status==='done';
+const isCurrent=phase.status==='current';
+return`<div class="timeline-task"><span class="${isDone?'check':isCurrent?'pending-check':'pending-check'}">${isDone?'✓':isCurrent?'◐':'○'}</span> ${t}</div>`;
+}).join('')}</div>
+</div>`;
+}
+document.getElementById('timeline').innerHTML=html;
+}
+
+let activePageId=null;
+function highlightDeps(pageId){
+activePageId=activePageId===pageId?null:pageId;
+document.querySelectorAll('.card[data-page-id]').forEach(el=>{
+el.classList.toggle('highlight',el.dataset.pageId===activePageId);
+});
+document.querySelectorAll('.arch-item').forEach(el=>{
+el.classList.remove('highlight');
+});
+if(activePageId){
+const page=DATA.pages.find(p=>p.id===activePageId);
+if(page){
+const source=page.source.replace('-api','').replace('all-','').replace('cloudbase-','');
+DATA.stores.forEach(s=>{
+const match=s.name.includes(source)||page.file.toLowerCase().includes(s.name.toLowerCase().replace('store',''));
+if(match){
+document.querySelectorAll('.arch-item').forEach(el=>{
+if(el.textContent.includes(s.name))el.classList.add('highlight');
+});
+}
+});
+const archItem=document.querySelector(`.arch-item[data-arch-id="${activePageId}"]`);
+if(archItem)archItem.classList.add('highlight');
+}
+}
+}
+
+function showHelp(event,title,text){
+const tt=document.getElementById('tooltip');
+tt.innerHTML=`<strong>${title}</strong>${text}`;
+tt.style.left=Math.min(event.clientX+12,window.innerWidth-300)+'px';
+tt.style.top=(event.clientY+12)+'px';
+tt.classList.add('show');
+setTimeout(()=>tt.classList.remove('show'),4000);
+}
+
+document.getElementById('tabs').addEventListener('click',e=>{
+const tab=e.target.closest('.tab');
+if(!tab)return;
+document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+tab.classList.add('active');
+document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+document.getElementById('panel-'+tab.dataset.tab).classList.add('active');
+});
+
+document.addEventListener('click',e=>{
+if(!e.target.classList.contains('help-btn'))document.getElementById('tooltip').classList.remove('show');
+});
+
+renderStats();
+renderPages();
+renderArch();
+renderIssues();
+renderRoadmap();
+</script>
+</body>
+</html>

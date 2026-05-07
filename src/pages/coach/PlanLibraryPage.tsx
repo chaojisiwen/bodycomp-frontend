@@ -5,7 +5,6 @@ import { Card } from '@/components/ui/card'
 import { Modal } from '@/components/common/Modal'
 import { usePlanStore, useFilteredPlans, usePlanCountByType, type IPlan, type IPlanForm } from '@/stores/planStore'
 import { useNotificationStore } from '@/stores/notificationStore'
-import { coachApi } from '@/services/api'
 import { assignPlan } from '@/cloudbase/services/coach'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -24,15 +23,15 @@ export function PlanLibraryPage() {
   const [members, setMembers] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
-    coachApi.getMyMembers().then(res => {
-      if (res.success && res.data) {
-        setMembers(res.data.map(m => ({
-          id: m.id,
-          name: m.name || '未知用户',
-        })))
+    if (!user?.id) return
+    import('@/cloudbase/services/coach').then(({ getCoachMemberList }) => {
+      return getCoachMemberList(user.id!)
+    }).then(list => {
+      if (list) {
+        setMembers(list.map(m => ({ id: m.id, name: m.name })))
       }
-    })
-  }, [])
+    }).catch(() => {})
+  }, [user?.id])
 
   // 新建/编辑方案弹窗
   const [showPlanModal, setShowPlanModal] = useState(false)

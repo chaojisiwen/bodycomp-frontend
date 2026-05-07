@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>体成分管理系统 - 项目看板</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --border: #334155;
+  --text: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --accent: #818cf8;
+  --green: #4ade80;
+  --yellow: #facc15;
+  --red: #f87171;
+  --gray: #64748b;
+  --coach: #a78bfa;
+  --member: #818cf8;
+  --store: #fb923c;
+  --service: #38bdf8;
+  --radius: 12px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh; line-height: 1.6;
+}
+.header {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 24px;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-inner { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.header h1 { font-size: 1.4em; font-weight: 700; }
+.header .meta { display: flex; gap: 16px; font-size: 0.85em; color: var(--text-secondary); flex-wrap: wrap; }
+.header .meta span { display: flex; align-items: center; gap: 4px; }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 20px; font-size: 0.8em; font-weight: 600; }
+.badge-green { background: rgba(74, 222, 128, 0.15); color: var(--green); }
+.badge-yellow { background: rgba(250, 204, 21, 0.15); color: var(--yellow); }
+.badge-red { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+.badge-gray { background: rgba(100, 116, 139, 0.15); color: var(--gray); }
+
+.tabs { display: flex; gap: 0; background: var(--card); border-radius: var(--radius); overflow: hidden; margin: 20px auto; max-width: 1200px; border: 1px solid var(--border); }
+.tab-btn {
+  flex: 1; padding: 14px 20px; background: transparent; border: none; color: var(--text-secondary);
+  font-size: 0.95em; cursor: pointer; transition: all 0.2s; font-weight: 500;
+  border-bottom: 2px solid transparent;
+}
+.tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(129,140,248,0.08); }
+
+.content { max-width: 1200px; margin: 0 auto; padding: 0 16px 40px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* 页面清单 */
+.module-group { margin-bottom: 28px; }
+.module-group h3 {
+  font-size: 1.05em; font-weight: 600; margin-bottom: 12px; padding: 8px 14px;
+  border-radius: 8px; display: inline-flex; align-items: center; gap: 8px;
+}
+.module-group.public h3 { background: rgba(100,116,139,0.12); color: #94a3b8; }
+.module-group.member h3 { background: rgba(129,140,248,0.12); color: var(--member); }
+.module-group.coach h3 { background: rgba(167,139,250,0.12); color: var(--coach); }
+.page-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; }
+.page-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+  cursor: pointer; transition: all 0.2s;
+}
+.page-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.page-card .status-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.status-complete { background: var(--green); box-shadow: 0 0 8px rgba(74,222,128,0.4); }
+.status-needs-optimization { background: var(--yellow); box-shadow: 0 0 8px rgba(250,204,21,0.4); }
+.status-needs-refactor { background: var(--red); box-shadow: 0 0 8px rgba(248,113,113,0.4); }
+.status-basic { background: var(--gray); box-shadow: 0 0 8px rgba(100,116,139,0.4); }
+.page-card .page-info { flex: 1; min-width: 0; }
+.page-card .page-name { font-weight: 600; font-size: 0.92em; margin-bottom: 2px; }
+.page-card .page-meta { font-size: 0.78em; color: var(--text-secondary); }
+.page-card .page-lines { font-size: 0.75em; color: var(--text-secondary); white-space: nowrap; }
+.page-card.highlight { border-color: var(--accent); box-shadow: 0 0 16px rgba(129,140,248,0.2); }
+
+/* 模块架构 */
+.arch-layers { position: relative; padding: 20px 0; }
+.arch-layer { margin-bottom: 20px; }
+.arch-layer-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 0.9em;
+  color: var(--text-secondary);
+}
+.arch-layer-header .layer-label { font-weight: 700; font-size: 1em; color: var(--text); }
+.tooltip-wrap { position: relative; display: inline-flex; cursor: help; }
+.tooltip-btn {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--border);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--text-secondary); font-weight: bold;
+  transition: all 0.2s;
+}
+.tooltip-btn:hover { background: var(--accent); color: #fff; }
+.tooltip-pop {
+  position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+  background: #0f172a; border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 18px; width: 280px; z-index: 200;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: none;
+}
+.tooltip-pop::after {
+  content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
+  width: 10px; height: 10px; background: #0f172a; border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border); transform: translateX(-50%) rotate(45deg);
+}
+.tooltip-wrap:hover .tooltip-pop { display: block; }
+.tooltip-pop h4 { font-size: 0.9em; margin-bottom: 6px; color: var(--accent); }
+.tooltip-pop p { font-size: 0.82em; color: var(--text-secondary); line-height: 1.5; }
+.layer-items { display: flex; flex-wrap: wrap; gap: 8px; }
+.layer-item {
+  padding: 6px 14px; border-radius: 8px; font-size: 0.85em; font-weight: 500;
+  border: 1px solid transparent;
+}
+.layer-item.member { background: rgba(129,140,248,0.12); border-color: rgba(129,140,248,0.3); color: var(--member); }
+.layer-item.coach { background: rgba(167,139,250,0.12); border-color: rgba(167,139,250,0.3); color: var(--coach); }
+.layer-item.store { background: rgba(251,146,60,0.12); border-color: rgba(251,146,60,0.3); color: var(--store); }
+.layer-item.service { background: rgba(56,189,248,0.12); border-color: rgba(56,189,248,0.3); color: var(--service); }
+.layer-item.infra { background: rgba(100,116,139,0.12); border-color: rgba(100,116,139,0.3); color: var(--text-secondary); }
+
+/* 问题看板 */
+.issues-grid { display: grid; gap: 20px; }
+.issue-col { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.issue-col.p0 { border-top: 3px solid var(--red); }
+.issue-col.p1 { border-top: 3px solid var(--yellow); }
+.issue-col.p2 { border-top: 3px solid var(--accent); }
+.issue-col h4 { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 1em; }
+.issue-col.p0 h4 { color: var(--red); }
+.issue-col.p1 h4 { color: var(--yellow); }
+.issue-col.p2 h4 { color: var(--accent); }
+.issue-item {
+  padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: 8px;
+  margin-bottom: 8px; font-size: 0.88em; cursor: pointer; transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+.issue-item:hover { background: rgba(255,255,255,0.06); }
+.issue-item.p0-item { border-left-color: var(--red); }
+.issue-item.p1-item { border-left-color: var(--yellow); }
+.issue-item.p2-item { border-left-color: var(--accent); }
+.issue-item .issue-file { font-size: 0.8em; color: var(--text-secondary); margin-top: 4px; }
+.empty-state { text-align: center; padding: 30px; color: var(--green); font-size: 0.9em; }
+.empty-state svg { width: 40px; height: 40px; margin-bottom: 10px; }
+
+/* 迭代规划 */
+.roadmap { padding: 20px 0; }
+.roadmap-phase { display: flex; gap: 20px; margin-bottom: 24px; }
+.phase-marker {
+  width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 1.1em; font-weight: 700; flex-shrink: 0; border: 2px solid;
+}
+.phase-marker.done { background: rgba(74,222,128,0.15); border-color: var(--green); color: var(--green); }
+.phase-marker.current { background: rgba(129,140,248,0.15); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 16px rgba(129,140,248,0.3); }
+.phase-marker.pending { background: rgba(100,116,139,0.1); border-color: var(--gray); color: var(--gray); }
+.phase-content { flex: 1; }
+.phase-content h4 { font-size: 1.05em; margin-bottom: 6px; }
+.phase-content .phase-desc { color: var(--text-secondary); font-size: 0.88em; margin-bottom: 10px; }
+.phase-tasks { list-style: none; }
+.phase-tasks li {
+  padding: 6px 0; font-size: 0.88em; display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.phase-tasks li:last-child { border-bottom: none; }
+.phase-tasks li.done { color: var(--text-secondary); text-decoration: line-through; }
+.phase-tasks li.current { color: var(--accent); font-weight: 500; }
+.phase-tasks li input { margin-right: 4px; }
+.connect-line {
+  width: 2px; height: 24px; background: var(--border); margin-left: 19px;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .page-grid { grid-template-columns: 1fr; }
+  .tabs { flex-wrap: wrap; }
+  .tab-btn { flex: 1 1 45%; font-size: 0.85em; padding: 12px 10px; }
+  .roadmap-phase { gap: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <h1>体成分管理系统</h1>
+      <div class="meta">
+        <span>React 18 + TypeScript + Vite 5</span>
+        <span>16 页面</span>
+        <span>10 Store</span>
+        <span>18 测试</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span class="badge badge-green">P0 清零</span>
+      <span class="badge badge-yellow">P1 5项</span>
+      <span class="badge badge-gray">P2 3项</span>
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab(0)">📄 页面清单</button>
+  <button class="tab-btn" onclick="switchTab(1)">🏗️ 模块架构</button>
+  <button class="tab-btn" onclick="switchTab(2)">🐛 问题看板</button>
+  <button class="tab-btn" onclick="switchTab(3)">🗓️ 迭代规划</button>
+</div>
+
+<div class="content">
+
+<!-- 标签页1: 页面清单 -->
+<div class="tab-panel active" id="tab-0">
+
+  <div class="module-group public">
+    <h3>🔐 公共模块</h3>
+    <div class="page-grid">
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-needs-optimization"></div>
+        <div class="page-info">
+          <div class="page-name">登录页 LoginPage</div>
+          <div class="page-meta">/login &middot; 开发模式快捷通道已加</div>
+        </div>
+        <div class="page-lines">447行</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="module-group member">
+    <h3>👤 会员端（8页）</h3>
+    <div class="page-grid">
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-complete"></div>
+        <div class="page-info">
+          <div class="page-name">会员首页 HomePage</div>
+          <div class="page-meta">/member &middot; 汇总各Store数据</div>
+        </div>
+        <div class="page-lines">458行</div>
+      </div>
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-complete"></div>
+        <div class="page-info">
+          <div class="page-name">饮食录入 IntakePage</div>
+          <div class="page-meta">/member/intake &middot; mealStore</div>
+        </div>
+        <div class="page-lines">722行</div>
+      </div>
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-needs-optimization"></div>
+        <div class="page-info">
+          <div class="page-name">运动记录 ExercisePage</div>
+          <div class="page-meta">/member/exercise &middot; exerciseStore &middot; 1220行待拆分</div>
+        </div>
+        <div class="page-lines">1220行</div>
+      </div>
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-needs-optimization"></div>
+        <div class="page-info">
+          <div class="page-name">AI 食物识别 RecognizePage</div>
+          <div class="page-meta">/member/recognize &middot; 多AI服务商投票</div>
+        </div>
+        <div class="page-lines">950行</div>
+      </div>
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-needs-optimization"></div>
+        <div class="page-info">
+          <div class="page-name">体成分数据 MyBodyDataPage</div>
+          <div class="page-meta">/member/body-data &middot; bodyStore &middot; 1147行待拆分</div>
+        </div>
+        <div class="page-lines">1147行</div>
+      </div>
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-complete"></div>
+        <div class="page-info">
+          <div class="page-name">个人资料 MemberProfilePage</div>
+          <div class="page-meta">/member/profile &middot; profileStore</div>
+        </div>
+        <div class="page-lines">834行</div>
+      </div>
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-complete"></div>
+        <div class="page-info">
+          <div class="page-name">我的计划 MyPlansPage</div>
+          <div class="page-meta">/member/plans &middot; assignedPlanStore</div>
+        </div>
+        <div class="page-lines">339行</div>
+      </div>
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-needs-optimization"></div>
+        <div class="page-info">
+          <div class="page-name">消息中心 MemberMessagesPage</div>
+          <div class="page-meta">/member/messages &middot; reaction功能待实现</div>
+        </div>
+        <div class="page-lines">397行</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="module-group coach">
+    <h3>👨‍🏫 教练端（7页）</h3>
+    <div class="page-grid">
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-complete"></div>
+        <div class="page-info">
+          <div class="page-name">教练首页 CoachHome</div>
+          <div class="page-meta">/coach &middot; coachApi</div>
+        </div>
+        <div class="page-lines">312行</div>
+      </div>
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-complete"></div>
+        <div class="page-info">
+          <div class="page-name">会员列表 CoachMemberList</div>
+          <div class="page-meta">/coach/members &middot; coachApi</div>
+        </div>
+        <div class="page-lines">225行</div>
+      </div>
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-needs-refactor"></div>
+        <div class="page-info">
+          <div class="page-name">会员详情 CoachMemberDetail</div>
+          <div class="page-meta">/coach/members/:id &middot; 1302行最胖页面</div>
+        </div>
+        <div class="page-lines">1302行</div>
+      </div>
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-complete"></div>
+        <div class="page-info">
+          <div class="page-name">预警中心 WarningCenter</div>
+          <div class="page-meta">/coach/warnings &middot; warningStore</div>
+        </div>
+        <div class="page-lines">255行</div>
+      </div>
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-needs-optimization"></div>
+        <div class="page-info">
+          <div class="page-name">方案库 PlanLibrary</div>
+          <div class="page-meta">/coach/plans &middot; planStore &middot; 6处TODO</div>
+        </div>
+        <div class="page-lines">853行</div>
+      </div>
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-complete"></div>
+        <div class="page-info">
+          <div class="page-name">教练资料 CoachProfile</div>
+          <div class="page-meta">/coach/profile &middot; coachProfileStore</div>
+        </div>
+        <div class="page-lines">452行</div>
+      </div>
+      <div class="page-card" onclick="highlight(this)">
+        <div class="status-dot status-basic"></div>
+        <div class="page-info">
+          <div class="page-name">通知中心 NotificationCenter</div>
+          <div class="page-meta">/coach/notifications &middot; 功能较单薄</div>
+        </div>
+        <div class="page-lines">131行</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 标签页2: 模块架构 -->
+<div class="tab-panel" id="tab-1">
+  <div class="arch-layers">
+
+    <div class="arch-layer">
+      <div class="arch-layer-header">
+        <span class="layer-label">🖥️ 展示层</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-btn">?</span>
+          <div class="tooltip-pop">
+            <h4>展示层</h4>
+            <p>用户看到的页面和组件，比如登录页、会员首页、教练后台等。React 负责把它们画到屏幕上。</p>
+          </div>
+        </span>
+      </div>
+      <div class="layer-items">
+        <span class="layer-item member">登录页</span>
+        <span class="layer-item member">会员首页</span>
+        <span class="layer-item member">饮食录入</span>
+        <span class="layer-item member">运动记录</span>
+        <span class="layer-item member">AI识别</span>
+        <span class="layer-item member">体成分</span>
+        <span class="layer-item member">个人资料</span>
+        <span class="layer-item member">我的计划</span>
+        <span class="layer-item member">消息中心</span>
+        <span class="layer-item coach">教练首页</span>
+        <span class="layer-item coach">会员列表</span>
+        <span class="layer-item coach">会员详情</span>
+        <span class="layer-item coach">预警中心</span>
+        <span class="layer-item coach">方案库</span>
+        <span class="layer-item coach">教练资料</span>
+        <span class="layer-item coach">通知中心</span>
+      </div>
+    </div>
+
+    <div class="arch-layer">
+      <div class="arch-layer-header">
+        <span class="layer-label">🧠 状态层</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-btn">?</span>
+          <div class="tooltip-pop">
+            <h4>Store（数据抽屉）</h4>
+            <p>每个 Store 就像一个带锁的抽屉，专门存一类数据。比如 mealStore 存饮食记录，bodyStore 存体成分数据。页面需要数据时从这里取。</p>
+          </div>
+        </span>
+      </div>
+      <div class="layer-items">
+        <span class="layer-item store">mealStore</span>
+        <span class="layer-item store">exerciseStore</span>
+        <span class="layer-item store">bodyStore</span>
+        <span class="layer-item store">recognizeStore</span>
+        <span class="layer-item store">profileStore</span>
+        <span class="layer-item store">planStore</span>
+        <span class="layer-item store">warningStore</span>
+        <span class="layer-item store">coachProfileStore</span>
+        <span class="layer-item store">assignedPlanStore</span>
+        <span class="layer-item store">notificationStore</span>
+      </div>
+    </div>
+
+    <div class="arch-layer">
+      <div class="arch-layer-header">
+        <span class="layer-label">🔌 服务层</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-btn">?</span>
+          <div class="tooltip-pop">
+            <h4>服务层</h4>
+            <p>前端跟后端打电话的"接线员"。把页面的请求翻译成 API 调用，再把后端返回的数据整理好交给 Store。</p>
+          </div>
+        </span>
+      </div>
+      <div class="layer-items">
+        <span class="layer-item service">api.ts</span>
+        <span class="layer-item service">auth</span>
+        <span class="layer-item service">coach</span>
+        <span class="layer-item service">meals</span>
+        <span class="layer-item service">exercises</span>
+        <span class="layer-item service">bodyRecords</span>
+        <span class="layer-item service">recognize (11子模块)</span>
+        <span class="layer-item service">notifications</span>
+      </div>
+    </div>
+
+    <div class="arch-layer">
+      <div class="arch-layer-header">
+        <span class="layer-label">⚙️ 基础设施</span>
+        <span class="tooltip-wrap">
+          <span class="tooltip-btn">?</span>
+          <div class="tooltip-pop">
+            <h4>基础设施</h4>
+            <p>CloudBase = 腾讯云后端服务；HashRouter = 网页地址路由方式；PWA = 可离线使用的网页应用。</p>
+          </div>
+        </span>
+      </div>
+      <div class="layer-items">
+        <span class="layer-item infra">CloudBase 云开发</span>
+        <span class="layer-item infra">HashRouter 路由</span>
+        <span class="layer-item infra">PWA 离线缓存</span>
+        <span class="layer-item infra">多AI服务商（混元/智谱/Gemini/百度）</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 标签页3: 问题看板 -->
+<div class="tab-panel" id="tab-2">
+  <div class="issues-grid">
+
+    <div class="issue-col p0">
+      <h4>🔴 P0 - 必须马上处理</h4>
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <div>🎉 P0 已全部清零！</div>
+      </div>
+    </div>
+
+    <div class="issue-col p1">
+      <h4>🟡 P1 - 尽快处理（4项）</h4>
+      <div class="issue-item p1-item">
+        CoachMemberDetailPage 1302行 - 项目最胖页面，需要拆分
+        <div class="issue-file">src/pages/coach/CoachMemberDetailPage.tsx</div>
+      </div>
+      <div class="issue-item p1-item">
+        ExercisePage 1220行 / MyBodyDataPage 1147行 - 代码量过大
+        <div class="issue-file">src/pages/member/ExercisePage.tsx / MyBodyDataPage.tsx</div>
+      </div>
+      <div class="issue-item p1-item">
+        planStore 6处TODO - 后端无对应云函数，需新建
+        <div class="issue-file">src/stores/planStore.ts</div>
+      </div>
+      <div class="issue-item p1-item">
+        目标进度反馈已新增 GoalProgressCard（待用户验证）
+        <div class="issue-file">src/components/GoalProgressCard.tsx</div>
+      </div>
+    </div>
+
+    <div class="issue-col p2">
+      <h4>🔵 P2 - 有空再弄（4项）</h4>
+      <div class="issue-item p2-item">
+        缺少 ESLint / Prettier 代码规范 - 代码风格不统一
+        <div class="issue-file">项目配置</div>
+      </div>
+      <div class="issue-item p2-item">
+        RingChart / NutritionProgress 数据边界校验缺失
+        <div class="issue-file">组件层</div>
+      </div>
+      <div class="issue-item p2-item">
+        NotificationCenterPage 功能单薄 - 只有131行
+        <div class="issue-file">src/pages/coach/NotificationCenterPage.tsx</div>
+      </div>
+      <div class="issue-item p2-item">
+        MemberMessagesPage reaction - 本地功能已实现，待云端同步优化
+        <div class="issue-file">src/pages/member/MemberMessagesPage.tsx</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 标签页4: 迭代规划 -->
+<div class="tab-panel" id="tab-3">
+  <div class="roadmap">
+
+    <div class="roadmap-phase">
+      <div class="phase-marker done">✓</div>
+      <div class="phase-content">
+        <h4>第一阶段：地基加固</h4>
+        <div class="phase-desc">修复 P0 级问题，确保核心链路稳定</div>
+        <ul class="phase-tasks">
+          <li class="done">硬编码ID修复（authApi, recognizeApi）</li>
+          <li class="done">Mock登录移除，CloudBase认证打通</li>
+          <li class="done">路由守卫修复，未登录拦截生效</li>
+          <li class="done">登录状态同步修复（login()调用）</li>
+          <li class="done">云函数 validateInviteCode 部署</li>
+          <li class="done">React 重复打包修复（chunk配置）</li>
+        </ul>
+      </div>
+    </div>
+    <div class="connect-line"></div>
+
+    <div class="roadmap-phase">
+      <div class="phase-marker done">✓</div>
+      <div class="phase-content">
+        <h4>第二阶段：测试体系</h4>
+        <div class="phase-desc">搭建测试框架，关键链路有保护网</div>
+        <ul class="phase-tasks">
+          <li class="done">Vitest + testing-library 安装配置</li>
+          <li class="done">auth.test.ts（5个用例）</li>
+          <li class="done">mealStore.test.ts（5个用例）</li>
+          <li class="done">auth-flow.test.tsx（8个用例，登录链路回归）</li>
+          <li class="done">18/18 测试全部通过</li>
+        </ul>
+      </div>
+    </div>
+    <div class="connect-line"></div>
+
+    <div class="roadmap-phase">
+      <div class="phase-marker done">✓</div>
+      <div class="phase-content">
+        <h4>第三阶段：代码拆分</h4>
+        <div class="phase-desc">把大文件拆小，降低维护难度</div>
+        <ul class="phase-tasks">
+          <li class="done">foodRecognition.ts 拆分为 11 子模块</li>
+          <li class="done">TypeScript 零错误编译</li>
+          <li class="done">测试全部通过</li>
+        </ul>
+      </div>
+    </div>
+    <div class="connect-line"></div>
+
+    <div class="roadmap-phase">
+      <div class="phase-marker current">▶</div>
+      <div class="phase-content">
+        <h4>第四阶段：P1 治理（当前）</h4>
+        <div class="phase-desc">处理 P1 级问题，优化代码质量</div>
+        <ul class="phase-tasks">
+          <li class="done">目标进度反馈功能 - GoalProgressCard 已上线</li>
+          <li class="current">CoachMemberDetailPage 1302行拆分</li>
+          <li>ExercisePage 1220行拆分</li>
+          <li>MyBodyDataPage 1147行拆分</li>
+          <li>planStore 6处TODO补全（等后端云函数）</li>
+        </ul>
+      </div>
+    </div>
+    <div class="connect-line"></div>
+
+    <div class="roadmap-phase">
+      <div class="phase-marker pending">○</div>
+      <div class="phase-content">
+        <h4>第五阶段：体验优化</h4>
+        <div class="phase-desc">P2 级改进，提升开发效率和用户体验</div>
+        <ul class="phase-tasks">
+          <li>ESLint / Prettier 代码规范</li>
+          <li>图表组件数据边界校验</li>
+          <li>NotificationCenterPage 功能完善</li>
+          <li>性能优化（懒加载、代码分割）</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div>
+
+<script>
+function switchTab(idx) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+  document.querySelectorAll('.tab-panel').forEach((p, i) => p.classList.toggle('active', i === idx));
+}
+function highlight(card) {
+  document.querySelectorAll('.page-card').forEach(c => c.classList.remove('highlight'));
+  card.classList.add('highlight');
+}
+</script>
+
+</body>
+</html>

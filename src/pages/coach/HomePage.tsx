@@ -14,7 +14,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Clock, MessageCircleWarning, FilePlus,
 } from 'lucide-react'
-import { coachApi, type Member } from '@/services/api'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   useTodayTasks, useWeekStats, useWarnings, useRecentCheckins,
   type WarningCard as WarningCardType,
@@ -34,7 +34,8 @@ function formatDate() {
 
 export function HomePage() {
   const navigate = useNavigate()
-  const [members, setMembers] = useState<Member[]>([])
+  const { user } = useAuth()
+  const [members, setMembers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [pageLoading, setPageLoading] = useState(true)
 
@@ -55,19 +56,20 @@ export function HomePage() {
   // 今日任务弹窗
   const [modalOpen, setModalOpen] = useState(false)
   const [modalTitle, setModalTitle] = useState('')
-  const [modalMembers, setModalMembers] = useState<Member[]>([])
+  const [modalMembers, setModalMembers] = useState<any[]>([])
 
   useEffect(() => {
-    coachApi.getMyMembers().then(res => {
-      if (res.success && res.data) {
-        setMembers(res.data)
-      }
+    if (!user?.id) return
+    import('@/cloudbase/services/coach').then(({ getCoachMemberList }) => {
+      return getCoachMemberList(user.id!)
+    }).then(list => {
+      if (list) setMembers(list)
       setLoading(false)
     }).catch((err) => {
       console.warn('[CoachHome] 获取会员列表失败:', err)
       setLoading(false)
     })
-  }, [])
+  }, [user?.id])
 
   const { pendingFollowup, pendingPlan, pendingUpload } = useTodayTasks(members)
   const { activeThisWeek, activeRate, dailyStats } = useWeekStats(members)

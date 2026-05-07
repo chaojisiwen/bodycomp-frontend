@@ -1,13 +1,20 @@
 import { memo } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { Drawer } from '@/components/common/Modal'
-import type { Member } from '@/services/api'
+
+// 教练首页弹窗显示的会员信息类型
+interface ModalMember {
+  id: string
+  name: string
+  hasPlan?: boolean
+  lastRecord?: string
+}
 
 // 弹窗组件
 const MemberModal = memo(function MemberModal({
   open, title, members, loading, onClose, onMemberClick,
 }: {
-  open: boolean; title: string; members: Member[]; loading: boolean; onClose: () => void; onMemberClick: (id: string) => void
+  open: boolean; title: string; members: ModalMember[]; loading: boolean; onClose: () => void; onMemberClick: (id: string) => void
 }) {
   return (
     <Drawer open={open} onOpenChange={(val) => { if (!val) onClose() }} title={title} showClose>

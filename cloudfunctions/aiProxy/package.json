@@ -1,0 +1,7 @@
+{
+  "name": "aiProxy",
+  "version": "1.0.0",
+  "description": "AI API 代理云函数（腾讯混元等）",
+  "main": "index.js",
+  "dependencies": {}
+}

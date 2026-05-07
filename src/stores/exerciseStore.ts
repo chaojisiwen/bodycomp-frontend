@@ -13,6 +13,7 @@ import {
   createExercise as apiCreateExercise,
   deleteExercise as apiDeleteExercise,
 } from '@/cloudbase/services/exercises'
+import { getCurrentUserId } from '@/cloudbase/services/utils'
 
 interface ExerciseState {
   // 状态
@@ -96,7 +97,8 @@ export const useExerciseStore = create<ExerciseState>()(
       // 添加运动记录（先本地，后台同步API）
       addExercise: async (exercise) => {
         const tempId = `local_${Date.now()}`
-        const localExercise: IExercise = { ...exercise, _id: tempId }
+        const uid = getCurrentUserId()
+        const localExercise: IExercise = { ...exercise, _id: tempId, user_id: exercise.user_id || uid || '' }
 
         set((state) => ({
           exercises: [localExercise, ...state.exercises],

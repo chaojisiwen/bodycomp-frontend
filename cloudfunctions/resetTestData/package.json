@@ -1,0 +1,9 @@
+{
+  "name": "resetTestData",
+  "version": "1.0.0",
+  "description": "重置测试数据",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

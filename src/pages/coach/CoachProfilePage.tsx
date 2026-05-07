@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Award,
   Star,
-  X,
   MessageSquare,
   ExternalLink,
   Edit,
@@ -15,90 +14,29 @@ import {
   Loader2,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
+import { BottomModal } from '@/components/common/BottomModal'
+import { CoachMenuItem } from '@/components/coach/CoachMenuItem'
+import { CoachEditProfileModal } from '@/components/coach/CoachEditProfileModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { useCoachProfileStore } from '@/stores/coachProfileStore'
 
-interface MenuItemData {
-  icon: React.ReactNode
-  label: string
-  badge?: string | number
-  description?: string
-  onClick?: () => void
-}
-
-function CoachMenuItem({ icon, label, badge, description, onClick }: MenuItemData) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-4 p-4 hover:bg-white/5 transition-colors"
-    >
-      <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-        {icon}
-      </div>
-      <div className="flex-1 text-left">
-        <span className="font-medium">{label}</span>
-        {description && (
-          <p className="text-xs text-gray-500 mt-0.5">{description}</p>
-        )}
-      </div>
-      {badge && (
-        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs">
-          {badge}
-        </span>
-      )}
-      <ChevronRight className="w-5 h-5 text-gray-500" />
-    </button>
-  )
-}
-
-// 底部弹窗通用组件
-function BottomModal({
-  open,
-  onClose,
-  title,
-  children
-}: {
-  open: boolean
-  onClose: () => void
-  title: string
-  children: React.ReactNode
-}) {
-  if (!open) return null
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center">
-      <div className="w-full max-w-lg bg-[#1a1a2e] rounded-t-3xl p-6 pb-[144px] animate-slide-up">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold">{title}</h3>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  )
-}
-
 export function CoachProfilePage({ onSwitchToMember }: { onSwitchToMember?: () => void }) {
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
   const { unreadCount } = useNotificationStore()
   const { profile, isLoading, fetchProfile } = useCoachProfileStore()
 
-  // 组件挂载时拉取教练信息
   useEffect(() => {
-    fetchProfile()
+    fetchProfile(user?.id)
   }, [fetchProfile])
 
-  // 弹窗状态
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
-  const [showNotificationModal, setShowNotificationModal] = useState(false)
+  // 弹窗
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [showSuggestionModal, setShowSuggestionModal] = useState(false)
+  const [showNotificationModal, setShowNotificationModal] = useState(false)
+  const [suggestion, setSuggestion] = useState('')
 
   // 通知偏好
   const [notifSettings, setNotifSettings] = useState({
@@ -108,17 +46,7 @@ export function CoachProfilePage({ onSwitchToMember }: { onSwitchToMember?: () =
     systemNotice: true,
   })
 
-  // 编辑资料
-  const [editForm, setEditForm] = useState({
-    name: profile?.name || '教练',
-    phone: profile?.phone || '',
-    intro: profile?.bio || '',
-  })
-
-  // 建议内容
-  const [suggestion, setSuggestion] = useState('')
-
-  // Toast 提示（简单实现）
+  // Toast
   const [toast, setToast] = useState<string | null>(null)
   const showToast = (msg: string) => {
     setToast(msg)
@@ -130,11 +58,6 @@ export function CoachProfilePage({ onSwitchToMember }: { onSwitchToMember?: () =
     navigate('/login')
   }
 
-  const handleSaveEdit = () => {
-    setShowEditModal(false)
-    showToast('保存成功')
-  }
-
   const handleSubmitSuggestion = () => {
     if (!suggestion.trim()) return
     setShowSuggestionModal(false)
@@ -143,7 +66,7 @@ export function CoachProfilePage({ onSwitchToMember }: { onSwitchToMember?: () =
     showToast('感谢您的反馈！')
   }
 
-  const menuGroups: { title: string; items: MenuItemData[] }[] = [
+  const menuGroups = [
     {
       title: '账户设置',
       items: [
@@ -241,7 +164,6 @@ export function CoachProfilePage({ onSwitchToMember }: { onSwitchToMember?: () =
               </button>
             </div>
 
-            {/* 资质标签 */}
             {profile.certifications && profile.certifications.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-4">
                 {profile.certifications.map(cert => (
@@ -256,15 +178,12 @@ export function CoachProfilePage({ onSwitchToMember }: { onSwitchToMember?: () =
               </div>
             )}
 
-            {/* 专长 */}
             {profile.specialty && (
               <p className="text-sm text-gray-400 mt-3">{profile.specialty}</p>
             )}
           </>
         ) : (
-          <div className="text-center py-4 text-gray-500">
-            暂无教练信息
-          </div>
+          <div className="text-center py-4 text-gray-500">暂无教练信息</div>
         )}
       </Card>
 
@@ -272,29 +191,27 @@ export function CoachProfilePage({ onSwitchToMember }: { onSwitchToMember?: () =
       {menuGroups.map((group, groupIndex) => (
         <Card key={groupIndex} className="divide-y divide-white/5">
           {group.title && (
-            <div className="px-4 py-2 text-xs text-gray-500 uppercase tracking-wider">
-              {group.title}
-            </div>
+            <div className="px-4 py-2 text-xs text-gray-500 uppercase tracking-wider">{group.title}</div>
           )}
           {group.items.map((item, itemIndex) => (
-            <CoachMenuItem
-              key={itemIndex}
-              icon={item.icon}
-              label={item.label}
-              badge={item.badge}
-              description={item.description}
-              onClick={item.onClick}
-            />
+            <CoachMenuItem key={itemIndex} {...item} />
           ))}
         </Card>
       ))}
 
-      {/* 版本信息 */}
       <div className="text-center py-4">
         <p className="text-xs text-gray-600">Equilibrio Corporeo v1.0.0</p>
       </div>
 
-      {/* ========== 弹窗区域 ========== */}
+      {/* 编辑资料弹窗 — 独立组件，内含 CloudBase 保存逻辑 */}
+      <CoachEditProfileModal
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        coachName={profile?.name || '教练'}
+        coachPhone={profile?.phone || ''}
+        coachBio={profile?.bio || ''}
+        coachId={profile?.id || ''}
+      />
 
       {/* 帮助与反馈弹窗 */}
       <BottomModal open={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} title="帮助与反馈">
@@ -309,12 +226,8 @@ export function CoachProfilePage({ onSwitchToMember }: { onSwitchToMember?: () =
             </div>
             <ChevronRight className="w-5 h-5 text-gray-500" />
           </button>
-
           <button
-            onClick={() => {
-              setShowFeedbackModal(false)
-              setShowSuggestionModal(true)
-            }}
+            onClick={() => { setShowFeedbackModal(false); setShowSuggestionModal(true) }}
             className="w-full p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
@@ -326,7 +239,6 @@ export function CoachProfilePage({ onSwitchToMember }: { onSwitchToMember?: () =
             </div>
             <ChevronRight className="w-5 h-5 text-gray-500" />
           </button>
-
           <button
             onClick={() => showToast('评分功能开发中')}
             className="w-full p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left flex items-center justify-between"
@@ -337,7 +249,6 @@ export function CoachProfilePage({ onSwitchToMember }: { onSwitchToMember?: () =
             </div>
             <ChevronRight className="w-5 h-5 text-gray-500" />
           </button>
-
           <button
             onClick={() => showToast('更新日志功能开发中')}
             className="w-full p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left flex items-center justify-between"
@@ -399,54 +310,6 @@ export function CoachProfilePage({ onSwitchToMember }: { onSwitchToMember?: () =
           ))}
         </div>
       </BottomModal>
-
-      {/* 编辑资料弹窗 */}
-      <BottomModal open={showEditModal} onClose={() => setShowEditModal(false)} title="编辑资料">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">姓名</label>
-            <input
-              type="text"
-              value={editForm.name}
-              onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
-              className="w-full bg-slate-900 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">联系电话</label>
-            <input
-              type="tel"
-              value={editForm.phone}
-              onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))}
-              className="w-full bg-slate-900 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">个人简介</label>
-            <textarea
-              value={editForm.intro}
-              onChange={e => setEditForm(p => ({ ...p, intro: e.target.value }))}
-              rows={3}
-              className="w-full bg-slate-900 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
-            />
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowEditModal(false)}
-              className="flex-1 py-3 rounded-xl bg-slate-700 text-slate-300 font-medium hover:bg-slate-600 transition-colors"
-            >
-              取消
-            </button>
-            <button
-              onClick={handleSaveEdit}
-              className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-400 transition-colors"
-            >
-              保存
-            </button>
-          </div>
-        </div>
-      </BottomModal>
-
     </div>
   )
 }

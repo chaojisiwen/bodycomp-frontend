@@ -5,6 +5,7 @@
 import { getApp } from '../index'
 import { COLLECTIONS } from '../config'
 import type { IExercise, IExerciseInput } from '../types'
+import { getCurrentUserId } from './utils'
 
 // ============================================================
 // CRUD 操作
@@ -23,6 +24,12 @@ export async function getExercises(options?: {
     if (!db) return []
 
     let query = db.collection(COLLECTIONS.EXERCISES)
+
+    // 用户过滤（必须，防止返回所有人的数据）
+    const uid = getCurrentUserId()
+    if (uid) {
+      query = query.where({ user_id: uid })
+    }
 
     // 日期筛选
     if (options?.date) {
@@ -89,6 +96,8 @@ export async function createExercise(
       ...data,
       total_duration,
       total_calories,
+      // 确保 exercise_date 是 Date 对象
+      exercise_date: data.exercise_date ? new Date(data.exercise_date) : new Date(),
       created_at: new Date(),
     })
 
@@ -190,11 +199,15 @@ export async function getExerciseTrend(
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - weeks * 7)
 
+    const whereCondition: Record<string, unknown> = {
+      exercise_date: db.command.gte(startDate.getTime()),
+    }
+    const uid = getCurrentUserId()
+    if (uid) whereCondition.user_id = uid
+
     const res = await db
       .collection(COLLECTIONS.EXERCISES)
-      .where({
-        exercise_date: db.command.gte(startDate.getTime()),
-      })
+      .where(whereCondition)
       .field({ exercise_date: true, total_duration: true, total_calories: true })
       .get()
 
@@ -233,11 +246,15 @@ export async function getBestDayOfWeek(): Promise<{ day: number; duration: numbe
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - 30)
 
+    const whereCondition: Record<string, unknown> = {
+      exercise_date: db.command.gte(startDate.getTime()),
+    }
+    const trendUid = getCurrentUserId()
+    if (trendUid) whereCondition.user_id = trendUid
+
     const res = await db
       .collection(COLLECTIONS.EXERCISES)
-      .where({
-        exercise_date: db.command.gte(startDate.getTime()),
-      })
+      .where(whereCondition)
       .field({ exercise_date: true, total_duration: true })
       .get()
 

@@ -4,7 +4,6 @@ import { ArrowLeft, MessageSquare, Calendar, TrendingUp, TrendingDown, Minus, Al
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Modal } from '@/components/common/Modal'
-import { coachApi } from '@/services/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePlanStore } from '@/stores/planStore'
 import { useNotificationStore } from '@/stores/notificationStore'
@@ -144,12 +143,7 @@ export function CoachMemberDetailPage() {
     meal: mealTypeMap[m.meal_type] || m.meal_type,
     calories: m.total_calories || 0,
     status: 'normal' as 'normal' | 'over' | 'under',
-  })) : [
-    { meal: '早餐', calories: 420, status: 'normal' as const },
-    { meal: '午餐', calories: 850, status: 'over' as const },
-    { meal: '晚餐', calories: 380, status: 'normal' as const },
-    { meal: '加餐', calories: 350, status: 'over' as const },
-  ]
+  })) : []
 
   // ── 运动记录映射 ──
   const exerciseRecords = exerciseData.length > 0 ? exerciseData.map((r) => {
@@ -163,58 +157,31 @@ export function CoachMemberDetailPage() {
       calories: r.total_calories || 0,
       status: status as 'completed' | 'under' | 'rest',
     }
-  }) : [
-    { date: '04-17', type: '力量训练', duration: 55, calories: 420, status: 'completed' as const },
-    { date: '04-16', type: '有氧跑步', duration: 40, calories: 380, status: 'completed' as const },
-    { date: '04-15', type: 'HIIT训练', duration: 30, calories: 350, status: 'completed' as const },
-    { date: '04-14', type: '力量训练', duration: 50, calories: 410, status: 'under' as const },
-    { date: '04-13', type: '休息日', duration: 0, calories: 0, status: 'rest' as const },
-    { date: '04-12', type: '游泳', duration: 60, calories: 450, status: 'completed' as const },
-    { date: '04-11', type: '力量训练', duration: 45, calories: 380, status: 'completed' as const },
-  ]
+  }) : []
 
   // ── 体成分数据映射 ──
   const latestBody = bodyRecords[0]
   const allBodyMetrics: BodyMetric[] = latestBody ? [
-    { id: 'weight', name: '体重', value: latestBody.weight || 72.5, unit: 'kg', normal: '65-75kg', trend: 'down', change: -2.5, icon: <Scale className="w-4 h-4 text-gray-400" />, isCore: true },
-    { id: 'bmi', name: 'BMI', value: latestBody.bmi || 22.4, unit: '', normal: '18.5-24', trend: 'down', change: -0.4, icon: <User className="w-4 h-4 text-gray-400" /> },
-    { id: 'fat', name: '体脂率', value: latestBody.body_fat || 19.2, unit: '%', normal: '15-20%', trend: 'down', change: -3.3, icon: <Flame className="w-4 h-4 text-gray-400" />, isCore: true },
-    { id: 'muscle', name: '肌肉量', value: latestBody.muscle_mass || 56.5, unit: 'kg', normal: '55-65kg', trend: 'up', change: 1.2, icon: <TrendingUp className="w-4 h-4 text-gray-400" />, isCore: true },
-    { id: 'visceral', name: '内脏脂肪', value: latestBody.visceral_fat || 8, unit: '', normal: '1-9', trend: 'down', change: -1, icon: <Heart className="w-4 h-4 text-gray-400" /> },
-    { id: 'water', name: '体水分', value: latestBody.water_content || 55.2, unit: '%', normal: '50-60%', trend: 'stable', change: 0.3, icon: <Droplets className="w-4 h-4 text-gray-400" /> },
-    { id: 'bone', name: '骨量', value: latestBody.bone_mass || 2.8, unit: 'kg', normal: '2.5-3.5', trend: 'stable', change: 0, icon: <Bone className="w-4 h-4 text-gray-400" /> },
-    { id: 'metabolism', name: '基础代谢', value: latestBody.basal_metabolism || 1680, unit: 'kcal', normal: '1600-1800', trend: 'stable', change: 0, icon: <Flame className="w-4 h-4 text-gray-400" /> },
-    { id: 'protein', name: '蛋白质', value: latestBody.protein_percent || 17.2, unit: '%', normal: '16-20%', trend: 'up', change: 0.3, icon: <Brain className="w-4 h-4 text-gray-400" /> },
-    { id: 'bodyage', name: '身体年龄', value: latestBody.metabolism_age || 28, unit: '岁', normal: '<实际年龄', trend: 'down', change: -2, icon: <User className="w-4 h-4 text-gray-400" /> },
-    { id: 'subfat', name: '皮下脂肪', value: latestBody.subcutaneous_fat || 12.5, unit: '%', normal: '9-18%', trend: 'down', change: -0.5, icon: <Flame className="w-4 h-4 text-gray-400" /> },
-    { id: 'fatfree', name: '去脂体重', value: latestBody.fat_free_mass || 54.2, unit: 'kg', normal: '50-60kg', trend: 'up', change: 0.3, icon: <TrendingUp className="w-4 h-4 text-gray-400" /> },
-  ] : [
-    { id: 'weight', name: '体重', value: 72.5, unit: 'kg', normal: '65-75kg', trend: 'down', change: -2.5, icon: <Scale className="w-4 h-4 text-gray-400" />, isCore: true },
-    { id: 'bmi', name: 'BMI', value: 22.4, unit: '', normal: '18.5-24', trend: 'down', change: -0.4, icon: <User className="w-4 h-4 text-gray-400" /> },
-    { id: 'fat', name: '体脂率', value: 19.2, unit: '%', normal: '15-20%', trend: 'down', change: -3.3, icon: <Flame className="w-4 h-4 text-gray-400" />, isCore: true },
-    { id: 'muscle', name: '肌肉量', value: 56.5, unit: 'kg', normal: '55-65kg', trend: 'up', change: 1.2, icon: <TrendingUp className="w-4 h-4 text-gray-400" />, isCore: true },
-    { id: 'visceral', name: '内脏脂肪', value: 8, unit: '', normal: '1-9', trend: 'down', change: -1, icon: <Heart className="w-4 h-4 text-gray-400" /> },
-    { id: 'water', name: '体水分', value: 55.2, unit: '%', normal: '50-60%', trend: 'stable', change: 0.3, icon: <Droplets className="w-4 h-4 text-gray-400" /> },
-    { id: 'bone', name: '骨量', value: 2.8, unit: 'kg', normal: '2.5-3.5', trend: 'stable', change: 0, icon: <Bone className="w-4 h-4 text-gray-400" /> },
-    { id: 'metabolism', name: '基础代谢', value: 1680, unit: 'kcal', normal: '1600-1800', trend: 'stable', change: 0, icon: <Flame className="w-4 h-4 text-gray-400" /> },
-    { id: 'protein', name: '蛋白质', value: 17.2, unit: '%', normal: '16-20%', trend: 'up', change: 0.3, icon: <Brain className="w-4 h-4 text-gray-400" /> },
-    { id: 'bodyage', name: '身体年龄', value: 28, unit: '岁', normal: '<实际年龄', trend: 'down', change: -2, icon: <User className="w-4 h-4 text-gray-400" /> },
-    { id: 'subfat', name: '皮下脂肪', value: 12.5, unit: '%', normal: '9-18%', trend: 'down', change: -0.5, icon: <Flame className="w-4 h-4 text-gray-400" /> },
-    { id: 'fatfree', name: '去脂体重', value: 54.2, unit: 'kg', normal: '50-60kg', trend: 'up', change: 0.3, icon: <TrendingUp className="w-4 h-4 text-gray-400" /> },
-  ]
+    { id: 'weight', name: '体重', value: latestBody.weight ?? 0, unit: 'kg', normal: '65-75kg', trend: 'down', change: 0, icon: <Scale className="w-4 h-4 text-gray-400" />, isCore: true },
+    { id: 'bmi', name: 'BMI', value: latestBody.bmi ?? 0, unit: '', normal: '18.5-24', trend: 'down', change: 0, icon: <User className="w-4 h-4 text-gray-400" /> },
+    { id: 'fat', name: '体脂率', value: latestBody.body_fat ?? 0, unit: '%', normal: '15-20%', trend: 'down', change: 0, icon: <Flame className="w-4 h-4 text-gray-400" />, isCore: true },
+    { id: 'muscle', name: '肌肉量', value: latestBody.muscle_mass ?? 0, unit: 'kg', normal: '55-65kg', trend: 'up', change: 0, icon: <TrendingUp className="w-4 h-4 text-gray-400" />, isCore: true },
+    { id: 'visceral', name: '内脏脂肪', value: latestBody.visceral_fat ?? 0, unit: '', normal: '1-9', trend: 'down', change: 0, icon: <Heart className="w-4 h-4 text-gray-400" /> },
+    { id: 'water', name: '体水分', value: latestBody.water_content ?? 0, unit: '%', normal: '50-60%', trend: 'stable', change: 0, icon: <Droplets className="w-4 h-4 text-gray-400" /> },
+    { id: 'bone', name: '骨量', value: latestBody.bone_mass ?? 0, unit: 'kg', normal: '2.5-3.5', trend: 'stable', change: 0, icon: <Bone className="w-4 h-4 text-gray-400" /> },
+    { id: 'metabolism', name: '基础代谢', value: latestBody.basal_metabolism ?? 0, unit: 'kcal', normal: '1600-1800', trend: 'stable', change: 0, icon: <Flame className="w-4 h-4 text-gray-400" /> },
+    { id: 'protein', name: '蛋白质', value: latestBody.protein_percent ?? 0, unit: '%', normal: '16-20%', trend: 'up', change: 0, icon: <Brain className="w-4 h-4 text-gray-400" /> },
+    { id: 'bodyage', name: '身体年龄', value: latestBody.metabolism_age ?? 0, unit: '岁', normal: '<实际年龄', trend: 'down', change: 0, icon: <User className="w-4 h-4 text-gray-400" /> },
+    { id: 'subfat', name: '皮下脂肪', value: latestBody.subcutaneous_fat ?? 0, unit: '%', normal: '9-18%', trend: 'down', change: 0, icon: <Flame className="w-4 h-4 text-gray-400" /> },
+    { id: 'fatfree', name: '去脂体重', value: latestBody.fat_free_mass ?? 0, unit: 'kg', normal: '50-60kg', trend: 'up', change: 0, icon: <TrendingUp className="w-4 h-4 text-gray-400" /> },
+  ] : []
 
   // ── 近期记录（体成分趋势）──
   const recentRecords = bodyRecords.length > 0 ? bodyRecords.slice(0, 7).reverse().map(r => ({
     date: new Date(r.record_date!).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
     weight: r.weight || 0,
     fat: r.body_fat || 0,
-    calories: 1800,
-  })) : [
-    { date: '04-17', weight: 72.5, fat: 19.2, calories: 1850 },
-    { date: '04-16', weight: 72.6, fat: 19.3, calories: 2100 },
-    { date: '04-15', weight: 72.8, fat: 19.5, calories: 1650 },
-    { date: '04-14', weight: 73.0, fat: 19.6, calories: 1900 },
-  ]
+  })) : []
 
   // 点赞循环表情
   const LIKE_EMOJIS = ['👍', '🔥', '💪', '🌟', '❤️']
@@ -276,40 +243,51 @@ export function CoachMemberDetailPage() {
   }
   const [loading, setLoading] = useState(true)
 
-  // ── 从 API 拉取会员详情 ──
+  // ── 从 CloudBase 拉取会员详情 ──
   useEffect(() => {
     if (!memberId) return
-    // 去掉 'm' 前缀以匹配 getMemberDetail 的模拟数据（m001 → 001 → 尝试 '1'）
-    const apiId = memberId.replace(/^m0*/, '')
-    coachApi.getMemberDetail(apiId).then((res) => {
-      if (res.success && res.data) {
-        setMember(res.data)
+    import('@/cloudbase/services/coach').then(({ getMemberProfile }) => {
+      return getMemberProfile(memberId!)
+    }).then((data) => {
+      if (data) {
+        setMember({
+          name: data.name,
+          avatar: data.avatar,
+          goal: data.goal,
+          week: data.week,
+          startWeight: data.currentWeight,
+          currentWeight: data.currentWeight,
+          startFat: data.currentFat,
+          currentFat: data.currentFat,
+          phone: data.phone,
+          joinDate: data.joinDate,
+        })
       }
       setLoading(false)
-    })
+    }).catch(() => setLoading(false))
     fetchPlans()
   }, [memberId])
 
-  // 预设消息模板
-  const quickMessages = [
-    { emoji: '💪', text: '今天的训练计划记得完成哦～' },
-    { emoji: '🥗', text: '今天的饮食记录还没填呢，快去记录吧' },
-    { emoji: '📊', text: '本周数据报告出来了，效果不错！' },
-    { emoji: '⏰', text: '明天记得来复测～' },
-    { emoji: '❓', text: '有什么问题随时问我' },
-  ]
-
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!customMessage.trim()) return
-    // 发消息通知到会员端（写入 notificationStore，后续同步到后端）
+    const coachId = user?.id || ''
+    // 1. 写入本地 store（会员端立即可见）
     addNotification({
       type: 'system',
       title: '教练消息',
       content: customMessage,
+      coachName: user?.name || '教练',
       memberId: memberId || undefined,
       memberName: member?.name,
     })
-    console.log('[教练端] 发送消息给会员:', member?.name, customMessage)
+    // 2. 写入云端 notifications 集合（持久化）
+    await sendNotificationToCloud({
+      userId: memberId || '',
+      coachId,
+      title: '教练消息',
+      content: customMessage,
+      type: 'system',
+    })
     setMessageSent(true)
     setTimeout(() => {
       setShowMessageModal(false)
@@ -362,7 +340,11 @@ export function CoachMemberDetailPage() {
     }
   }
 
-  // ── 方案数据（后续从 API 拉取）──
+  // ── 从今日饮食数据生成预警 ──
+  const overMeals = todayMeals.filter(m => m.status === 'over')
+  const warningMessage = overMeals.length > 0
+    ? `${overMeals.map(m => m.meal).join('和')}热量超标，建议调整饮食结构`
+    : null
   const [planData, setPlanData] = useState<PlanData>({
     goal: member?.goal ?? '加载中',
     period: `2026-04-01 至 2026-06-30`,
@@ -374,15 +356,7 @@ export function CoachMemberDetailPage() {
     protein: 120,
     fat: 50,
     carbs: 150,
-    training: [
-      { day: '周一', type: '胸+三头肌', detail: '力量训练 60min', status: 'completed' },
-      { day: '周二', type: '有氧跑步', detail: '慢跑 40min', status: 'completed' },
-      { day: '周三', type: '背+二头肌', detail: '力量训练 60min', status: 'completed' },
-      { day: '周四', type: 'HIIT', detail: '高强度间歇 30min', status: 'under' },
-      { day: '周五', type: '腿+肩部', detail: '力量训练 60min', status: 'rest' },
-      { day: '周六', type: '有氧游泳', detail: '游泳 60min', status: 'rest' },
-      { day: '周日', type: '休息日', detail: '拉伸/放松', status: 'rest' },
-    ],
+    training: [],
     notes: '每次力量训练前后务必热身/拉伸10分钟。有氧保持心率120-150次/分。饮食记录每日必填，如有身体不适立即停止训练并告知。',
   })
 
@@ -491,15 +465,17 @@ export function CoachMemberDetailPage() {
       </Card>
 
       {/* 预警提示 */}
+      {warningMessage && (
       <Card className="p-4 border border-red-500/30">
         <div className="flex items-center gap-3 text-red-400">
           <AlertTriangle className="w-5 h-5" />
           <div>
             <p className="font-medium">需要关注</p>
-            <p className="text-sm text-red-400/80">午餐和加餐热量超标，建议调整饮食结构</p>
+            <p className="text-sm text-red-400/80">{warningMessage}</p>
           </div>
         </div>
       </Card>
+      )}
 
       {/* 标签切换 */}
       <div className="flex gap-1 bg-white/5 rounded-xl p-1">
@@ -525,39 +501,46 @@ export function CoachMemberDetailPage() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-medium">身体指标</h3>
-              <button
-                onClick={() => setShowAllMetrics(!showAllMetrics)}
-                className="text-sm text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
-              >
-                {showAllMetrics ? '收起' : '查看全部'}
-                <ChevronRight className={`w-4 h-4 transition-transform ${showAllMetrics ? 'rotate-90' : ''}`} />
-              </button>
+              {allBodyMetrics.length > 0 && (
+                <button
+                  onClick={() => setShowAllMetrics(!showAllMetrics)}
+                  className="text-sm text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                >
+                  {showAllMetrics ? '收起' : '查看全部'}
+                  <ChevronRight className={`w-4 h-4 transition-transform ${showAllMetrics ? 'rotate-90' : ''}`} />
+                </button>
+              )}
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              {displayedMetrics.map(metric => (
-                <Card key={metric.id} className="p-3">
-                  <div className="flex items-center gap-1.5 text-gray-400 mb-1.5">
-                    {metric.icon}
-                    <span className="text-sm">{metric.name}</span>
-                  </div>
-                  <p className="text-xl font-bold">{metric.value}<span className="text-sm text-gray-400">{metric.unit}</span></p>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-xs text-gray-500">正常 {metric.normal}</span>
-                    <div className="flex items-center gap-1">
-                      {getTrendIcon(metric.trend)}
-                      <span className={`text-xs ${['weight', 'bmi', 'fat', 'visceral', 'bodyage', 'subfat'].includes(metric.id) ? (metric.trend === 'down' ? 'text-emerald-400' : metric.trend === 'up' ? 'text-red-400' : 'text-gray-400') : (metric.trend === 'up' ? 'text-emerald-400' : metric.trend === 'down' ? 'text-red-400' : 'text-gray-400')}`}>
-                        {metric.change > 0 ? '+' : ''}{metric.change.toFixed(1)}{metric.unit}
-                      </span>
+            {allBodyMetrics.length > 0 ? (
+              <div className="grid grid-cols-3 gap-3">
+                {displayedMetrics.map(metric => (
+                  <Card key={metric.id} className="p-3">
+                    <div className="flex items-center gap-1.5 text-gray-400 mb-1.5">
+                      {metric.icon}
+                      <span className="text-sm">{metric.name}</span>
                     </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                    <p className="text-xl font-bold">{metric.value}<span className="text-sm text-gray-400">{metric.unit}</span></p>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs text-gray-500">正常 {metric.normal}</span>
+                      <div className="flex items-center gap-1">
+                        {getTrendIcon(metric.trend)}
+                        <span className={`text-xs ${['weight', 'bmi', 'fat', 'visceral', 'bodyage', 'subfat'].includes(metric.id) ? (metric.trend === 'down' ? 'text-emerald-400' : metric.trend === 'up' ? 'text-red-400' : 'text-gray-400') : (metric.trend === 'up' ? 'text-emerald-400' : metric.trend === 'down' ? 'text-red-400' : 'text-gray-400')}`}>
+                          {metric.change > 0 ? '+' : ''}{metric.change.toFixed(1)}{metric.unit}
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-8">暂无身体数据</div>
+            )}
           </div>
 
           {/* 近期记录 */}
           <div>
             <h3 className="font-medium mb-3">近期记录</h3>
+            {recentRecords.length > 0 ? (
             <Card className="p-0 divide-y divide-white/5">
               {recentRecords.map((record, index) => (
                 <div key={index} className="p-3 flex items-center justify-between">
@@ -568,13 +551,13 @@ export function CoachMemberDetailPage() {
                   <div className="flex gap-4 text-sm">
                     <span>{record.weight}kg</span>
                     <span className="text-gray-400">{record.fat}%</span>
-                    <span className={record.calories > 2000 ? 'text-red-400' : record.calories < 1500 ? 'text-yellow-400' : 'text-emerald-400'}>
-                      {record.calories}kcal
-                    </span>
                   </div>
                 </div>
               ))}
             </Card>
+            ) : (
+              <div className="text-center text-gray-500 py-8">暂无记录</div>
+            )}
           </div>
         </>
       )}
@@ -583,6 +566,7 @@ export function CoachMemberDetailPage() {
       {activeTab === 'diet' && (
         <div>
           <h3 className="font-medium mb-3">今日饮食</h3>
+          {todayMeals.length > 0 ? (
           <Card className="p-4 space-y-4">
             {todayMeals.map((meal, index) => {
               const key = `meal-${index}`
@@ -683,6 +667,9 @@ export function CoachMemberDetailPage() {
               )
             })}
           </Card>
+          ) : (
+            <div className="text-center text-gray-500 py-8">暂无饮食记录</div>
+          )}
         </div>
       )}
 
@@ -755,6 +742,7 @@ export function CoachMemberDetailPage() {
           {/* 近期训练记录 */}
           <div>
             <h3 className="font-medium mb-3">近期训练记录</h3>
+            {exerciseRecords.length > 0 ? (
             <Card className="p-3 space-y-1 divide-y divide-white/5">
               {exerciseRecords.map((record, index) => {
                 const key = `exercise-${index}`
@@ -869,6 +857,9 @@ export function CoachMemberDetailPage() {
                 )
               })}
             </Card>
+            ) : (
+              <div className="text-center text-gray-500 py-8">暂无运动记录</div>
+            )}
           </div>
         </>
       )}
@@ -1044,6 +1035,7 @@ export function CoachMemberDetailPage() {
               <Dumbbell className="w-4 h-4 text-emerald-400" />
               每周训练安排
             </h4>
+            {planData.training.length > 0 ? (
             <div className="space-y-2">
               {planData.training.map((item, idx) => (
                 <div key={item.day} className="flex items-center gap-2 bg-slate-800/50 rounded-lg p-3">
@@ -1080,6 +1072,9 @@ export function CoachMemberDetailPage() {
                 </div>
               ))}
             </div>
+            ) : (
+              <div className="text-center text-gray-500 py-4">暂无训练安排</div>
+            )}
           </div>
 
           {/* 教练叮嘱 */}
@@ -1244,30 +1239,8 @@ export function CoachMemberDetailPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* 快捷消息模板 */}
-            <div>
-              <p className="text-sm text-slate-400 mb-2">快捷消息</p>
-              <div className="grid grid-cols-1 gap-2">
-                {quickMessages.map((msg, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCustomMessage(msg.text)}
-                    className={`text-left p-3 rounded-xl transition-all ${
-                      customMessage === msg.text 
-                        ? 'bg-emerald-500/20 border border-emerald-500/50' 
-                        : 'bg-slate-800/50 border border-transparent hover:bg-slate-800'
-                    }`}
-                  >
-                    <span className="text-base mr-2">{msg.emoji}</span>
-                    <span className="text-sm text-slate-200">{msg.text}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* 自定义输入 */}
             <div>
-              <p className="text-sm text-slate-400 mb-2">或编辑消息</p>
               <textarea
                 value={customMessage}
                 onChange={(e) => setCustomMessage(e.target.value)}

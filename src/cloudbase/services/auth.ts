@@ -173,92 +173,20 @@ export async function loginAnonymously(): Promise<{ success: boolean; user?: IUs
 }
 
 /**
- * 邀请码登录（内测专用）
- *
- * 逻辑：
- *   1. 调用云函数 validateInviteCode 校验邀请码
- *   2. 如果返回 needPassword=true，需要前端展示密码输入框
- *   3. 用返回的 customToken 调用 auth.signInWithCustomToken
- *   4. 返回用户信息和角色
- *
- * @param code 邀请码，如 "M-A3K9F2"
- * @param password 密码（可选，如果云函数要求密码则必填）
+ * 登出
  */
-export async function loginWithInviteCode(
-  code: string,
-  password?: string
-): Promise<{ success: boolean; role?: string; user?: IUser; error?: string; needPassword?: boolean; isFirstLogin?: boolean; needSetPassword?: boolean }> {
+export async function logout(): Promise<void> {
   try {
-    await initCloudbase()
-    const appInstance = getApp()
-
-    if (!appInstance) {
-      // ── 降级：云开发未初始化时，使用本地 mock ───────────────────
-      console.warn('[Auth] 云开发未初始化，使用本地 mock 登录')
-      const normalized = code.trim().toUpperCase()
-      const role = normalized.startsWith('C-') ? 'coach' : 'member'
-      const mockUser: IUser = {
-        _id: `mock-${normalized}`,
-        uid: `mock-${normalized}`,
-        openid: '',
-        role: role as 'member' | 'coach',
-        name: role === 'coach' ? `教练${normalized}` : `会员${normalized}`,
-        phone: '',
-        invite_code: normalized,
-      }
-      return { success: true, role, user: mockUser, isFirstLogin: true }
-    }
-
-    // ── 1. 调用云函数校验邀请码 ──────────────────────────────
-    const fnResult = await appInstance.callFunction({
-      name: 'validateInviteCode',
-      data: { code: code.trim(), password: password?.trim() },
-    })
-
-    const res = (fnResult as unknown as { result?: {
-      code: number
-      message: string
-      data?: { token: string; role: string; uid: string; name: string; userId: string; isFirstLogin?: boolean; needSetPassword?: boolean }
-    } }).result
-
-    if (!res) {
-      return { success: false, error: '网络错误' }
-    }
-
-    // 需要密码
-    if (res.code === -2) {
-      return { success: false, error: '请输入密码', needPassword: true }
-    }
-
-    if (res.code !== 0) {
-      return { success: false, error: res.message || '邀请码无效' }
-    }
-
-    const { token, role, uid, name, userId, isFirstLogin, needSetPassword } = res.data!
-
-    // ── 2. 用 customToken 登录 ───────────────────────────────
     const auth = getAuth()
-    if (auth) {
-      // @ts-expect-error SDK 类型声明未包含 signInWithCustomToken
-      await auth.signInWithCustomToken(token)
+    if (!auth) {
+      setCurrentUser(null)
+      return
     }
-
-    const user: IUser = {
-      _id: userId,
-      uid,
-      openid: uid,
-      role: role as 'member' | 'coach',
-      name,
-      phone: '',
-      invite_code: code.trim().toUpperCase(),
-    }
-
-    setCurrentUser(user)
-
-    return { success: true, role, user, isFirstLogin, needSetPassword }
-  } catch (error: unknown) {
-    console.error('[Auth] 邀请码登录失败:', error)
-    return { success: false, error: (error as Error).message || '登录失败' }
+    await auth.signOut()
+    setCurrentUser(null)
+    console.log('[Auth] 已登出')
+  } catch (error) {
+    console.error('[Auth] 登出失败:', error)
   }
 }
 
@@ -294,24 +222,6 @@ export async function sendPhoneCode(phone: string): Promise<{ success: boolean; 
   }
 }
 
-/**
- * 登出
- */
-export async function logout(): Promise<void> {
-  try {
-    const auth = getAuth()
-    if (!auth) {
-      setCurrentUser(null)
-      return
-    }
-    await auth.signOut()
-    setCurrentUser(null)
-    console.log('[Auth] 已登出')
-  } catch (error) {
-    console.error('[Auth] 登出失败:', error)
-  }
-}
-
 // ============================================================
 // 用户信息
 // ============================================================
@@ -321,6 +231,7 @@ export async function logout(): Promise<void> {
  */
 async function fetchUserInfo(): Promise<IUser | null> {
   try {
+    await initCloudbase()
     const auth = getAuth()
     if (!auth) return null
 
@@ -335,70 +246,59 @@ async function fetchUserInfo(): Promise<IUser | null> {
     // 打印用户信息用于调试
     console.log('[Auth] 用户信息:', userInfo)
 
-    // 根据 openid 查询用户
     const db = getApp()?.database()
     if (!db) return null
 
-    const res = await db
-      .collection('users')
-      .where({ openid: userInfo.openid })
-      .limit(1)
-      .get()
+    // ── 查询策略：invite_code 优先（稳定标识），openid 兜底 ──
+    // 原因：匿名登录的 openid 每次可能变化，用 invite_code 查最准确
+    let user: IUser | null = null
 
-    if (res.data && res.data.length > 0) {
-      return res.data[0] as IUser
+    // 1. 优先用 localStorage 中的 invite_code 查询
+    try {
+      const stored = JSON.parse(localStorage.getItem('user') || '{}')
+      const inviteCode = stored?.inviteCode
+      if (inviteCode) {
+        const inviteRes = await db
+          .collection('users')
+          .where({ invite_code: inviteCode.trim().toUpperCase() })
+          .limit(1)
+          .get()
+        if (inviteRes.data && inviteRes.data.length > 0) {
+          user = inviteRes.data[0] as IUser
+          console.log('[Auth] 通过 invite_code 找到用户:', user.name || user._id)
+        }
+      }
+    } catch { /* 静默 */ }
+
+    // 2. 兜底：通过 openid 查询（兼容已存在的匿名用户）
+    if (!user) {
+      const openidRes = await db
+        .collection('users')
+        .where({ openid: userInfo.openid })
+        .limit(1)
+        .get()
+      if (openidRes.data && openidRes.data.length > 0) {
+        user = openidRes.data[0] as IUser
+      }
     }
 
-    // 如果用户不存在，返回基本用户信息
-    return {
-      _id: userInfo.uid || `user-${Date.now()}`,
-      openid: userInfo.openid,
-      name: (userInfo as unknown as { nickname?: string }).nickname || '用户',
-      phone: '',
-      role: 'member',
-    } as IUser
+    if (user) {
+      // 补齐 uid 字段（历史数据可能没有）
+      if (!user.uid && userInfo.uid) {
+        try {
+          await db.collection('users').doc(user._id).update({ uid: userInfo.uid })
+          user.uid = userInfo.uid
+        } catch { /* 静默 */ }
+      }
+      return user
+    }
+
+    // ⚠️ 不再自动创建用户 — 幽灵用户是教练端看不到数据的根因
+    // 找不到用户时返回 null，由调用方保留现有 AuthContext 状态
+    console.warn('[Auth] 未找到用户记录（invite_code / openid 均不匹配），返回 null')
+    return null
   } catch (error) {
     console.error('[Auth] 获取用户信息失败:', error)
-    return null
-  }
-}
-
-/**
- * 创建或更新用户
- */
-export async function upsertUser(openid: string, data: Partial<IUser>): Promise<IUser | null> {
-  try {
-    const db = getApp()?.database()
-    if (!db) return null
-
-    // 查找是否存在
-    const existing = await db
-      .collection('users')
-      .where({ openid })
-      .limit(1)
-      .get()
-
-    if (existing.data && existing.data.length > 0) {
-      // 更新
-      const id = existing.data[0]._id
-      await db.collection('users').doc(id).update({
-        ...data,
-        updated_at: new Date(),
-      })
-      return { ...existing.data[0], ...data } as IUser
-    } else {
-      // 创建
-      const res = await db.collection('users').add({
-        ...data,
-        openid,
-        role: 'member',
-        created_at: new Date(),
-        updated_at: new Date(),
-      })
-      return { ...data, _id: res.id, openid, role: 'member' } as IUser
-    }
-  } catch (error) {
-    console.error('[Auth] 创建/更新用户失败:', error)
     return null
   }
 }
@@ -407,3 +307,50 @@ export async function upsertUser(openid: string, data: Partial<IUser>): Promise<
  * 获取用户信息（别名）
  */
 export { fetchUserInfo as getUserInfo }
+
+/**
+ * 更新当前用户资料（按 _id 查找，替代按 openid 的 updateUserByOpenid）
+ * 用于头像、昵称等轻量更新 — 只允许修改已登录用户自己的资料
+ * 内置 5 秒超时 + 自动重试 1 次，防止网络波动导致数据丢失
+ */
+export async function updateCurrentUserProfile(
+  fields: Partial<Pick<IUser, 'name' | 'avatar' | 'phone' | 'nickname'>>
+): Promise<boolean> {
+  const maxRetries = 1
+  const timeoutMs = 5000
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      await initCloudbase()
+      const db = getApp()?.database()
+      if (!db) return false
+
+      const stored = JSON.parse(localStorage.getItem('user') || '{}')
+      const userId = stored?.id
+      if (!userId) {
+        console.warn('[Auth] updateCurrentUserProfile: 未找到用户 ID')
+        return false
+      }
+
+      // 带超时的更新操作
+      const updatePromise = db.collection('users')
+        .doc(userId)
+        .update({ ...fields, updated_at: new Date() })
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('更新超时')), timeoutMs)
+      )
+
+      await Promise.race([updatePromise, timeoutPromise])
+      return true
+    } catch (error) {
+      if (attempt < maxRetries) {
+        console.warn(`[Auth] 更新用户资料失败（第 ${attempt + 1} 次），即将重试:`, error)
+        continue
+      }
+      console.error('[Auth] 更新用户资料失败（已重试）:', error)
+      return false
+    }
+  }
+  return false
+}

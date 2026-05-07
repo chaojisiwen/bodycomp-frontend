@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui/card'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { useProfileStore } from '@/stores'
+import { useAuth } from '@/contexts/AuthContext'
 import { getNotifications, addMemberReply } from '@/cloudbase/services/notifications'
 
 // 快捷回复选项
@@ -80,9 +81,9 @@ export function MemberMessagesPage() {
   const [sendingReply, setSendingReply] = useState(false)
   const [selectedReaction, setSelectedReaction] = useState<string | null>(null)
 
-  // derive memberId from profileStore
-  const memberId = profile.memberId || 'demo_member'
-  void memberId // 使用 memberId 避免 TS 警告
+  const { user } = useAuth()
+  // 用 CloudBase 真实 UID 查询（不再用硬编码 demo_member）
+  const memberId = user?.id || profile.memberId || ''
 
   // 启动时从云端拉取最新通知
   useEffect(() => {

@@ -11,6 +11,7 @@ import { getCoaches } from '@/cloudbase/services/coach'
 import { usePlanTarget, useSetPlanTarget } from '@/stores/planStore'
 import { useProfileStore } from '@/stores/profileStore'
 import { FullPageLoader, useToast } from '@/components/common'
+import { GoalProgressCard } from '@/components/GoalProgressCard'
 
 // 热量目标（从最新体成分数据估算，或使用默认值）
 // 保留作为类型参考，实际使用从 store 获取的数据
@@ -151,6 +152,9 @@ export function HomePage() {
         </CardContent>
       </Card>
 
+      {/* 体成分目标进度 */}
+      <GoalProgressCard />
+
       {/* Calorie Cards */}
       <div className="grid grid-cols-3 gap-3">
         <Card className="bg-orange-500/10 border-orange-500/20">
@@ -204,7 +208,7 @@ export function HomePage() {
           {/* 碳水 */}
           <div>
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-purple-400">碳水</span>
+              <span style={{ color: '#a78bfa' }}>碳水</span>
               <span className="text-gray-400">{todayCarbs}/{carbsTarget}g</span>
             </div>
             <Progress value={Math.min(carbsPercent, 100)} className="h-2" indicatorClassName="bg-purple-500" />

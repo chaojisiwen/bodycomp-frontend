@@ -1,0 +1,9 @@
+{
+  "name": "validateInviteCode",
+  "version": "1.0.0",
+  "description": "邀请码验证云函数",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

@@ -5,6 +5,7 @@
 import { getApp } from '../index'
 import { COLLECTIONS } from '../config'
 import type { IMeal, IMealInput, IFoodItem } from '../types'
+import { getCurrentUserId } from './utils'
 
 // ============================================================
 // 辅助函数
@@ -48,6 +49,12 @@ export async function getMeals(options?: {
     if (!db) return []
 
     let query = db.collection(COLLECTIONS.MEALS)
+
+    // 用户过滤（必须，防止返回所有人的数据）
+    const uid = getCurrentUserId()
+    if (uid) {
+      query = query.where({ user_id: uid })
+    }
 
     // 日期筛选
     if (options?.date) {
@@ -133,6 +140,8 @@ export async function createMeal(
     const res = await db.collection(COLLECTIONS.MEALS).add({
       ...data,
       ...totals,
+      // 确保 meal_date 是 Date 对象，否则教练端按时间戳查询会匹配不上
+      meal_date: data.meal_date ? new Date(data.meal_date) : new Date(),
       created_at: new Date(),
     })
 
@@ -260,12 +269,16 @@ export async function getCalorieTrend(
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
 
+    const whereCondition: Record<string, unknown> = {
+      meal_date: db.command.gte(startDate.getTime()),
+    }
+    const uid = getCurrentUserId()
+    if (uid) whereCondition.user_id = uid
+
     const res = await db
       .collection(COLLECTIONS.MEALS)
-      .where({
-        meal_date: db.command.gte(startDate.getTime()),
-      })
-      .field({ meal_date: true, total_calories: true })
+      .where(whereCondition)
+      .field({ meal_date: true, total_calories: true, user_id: true })
       .get()
 
     // 按日期分组汇总

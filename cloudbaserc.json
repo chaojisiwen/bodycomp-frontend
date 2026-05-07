@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
+  "envId": "equilibrio-d1g3wgdfj6a16a180",
+  "functionRoot": "cloudfunctions",
+  "functions": [
+    {
+      "name": "validateInviteCode",
+      "timeout": 10,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 256
+    },
+    {
+      "name": "aiProxy",
+      "timeout": 60,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 512
+    },
+    {
+      "name": "cleanupGhostUsers",
+      "timeout": 30,
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "memorySize": 256
+    },
+    {
+      "name": "cleanupTestData",
+      "timeout": 30,
+      "runtime": "Nodejs16.13",
+      "handler": "index.cmain",
+      "memorySize": 256
+    }
+  ]
+}

@@ -14,6 +14,7 @@ import {
   updateBodyRecord as apiUpdateBodyRecord,
   deleteBodyRecord as apiDeleteBodyRecord,
 } from '@/cloudbase/services/bodyRecords'
+import { getCurrentUserId } from '@/cloudbase/services/utils'
 
 interface BodyState {
   // 状态
@@ -92,7 +93,8 @@ export const useBodyStore = create<BodyState>()(
       // 添加体成分记录（先本地，后台同步API）
       addRecord: async (record: Partial<IBodyRecord>) => {
         const tempId = `local_${Date.now()}`
-        const localRecord: IBodyRecord = { ...record, _id: tempId, record_date: record.record_date ?? new Date(), user_id: record.user_id ?? 'local-user' }
+        const uid = getCurrentUserId()
+        const localRecord: IBodyRecord = { ...record, _id: tempId, record_date: record.record_date ?? new Date(), user_id: record.user_id || uid || '' }
 
         set((state) => ({
           records: [localRecord, ...state.records].sort(

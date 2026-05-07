@@ -17,6 +17,7 @@ import {
   updateMeal as apiUpdateMeal,
   deleteMeal as apiDeleteMeal,
 } from '@/cloudbase/services/meals'
+import { getCurrentUserId } from '@/cloudbase/services/utils'
 
 interface MealState {
   // 状态
@@ -105,7 +106,8 @@ export const useMealStore = create<MealState>()(
       addMeal: async (meal) => {
         // 生成临时ID（用于本地，去重）
         const tempId = `local_${Date.now()}`
-        const localMeal: IMeal = { ...meal, _id: tempId }
+        const uid = getCurrentUserId()
+        const localMeal: IMeal = { ...meal, _id: tempId, user_id: meal.user_id || uid || '' }
 
         // 立即更新本地（用户无感知）
         set((state) => ({

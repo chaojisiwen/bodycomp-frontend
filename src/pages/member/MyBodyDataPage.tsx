@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { TrendingUp, TrendingDown, Minus, Calendar, ChevronRight, User, Scale, Droplets, Bone, Heart, Brain, Flame, Camera, Plus, X, Upload, Pencil, Activity } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Calendar, ChevronRight, User, Scale, Droplets, Bone, Heart, Brain, Flame, Camera, Plus, X, Pencil, Activity } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { useBodyStore, useLatestBodyRecord, useBodyTrend } from '@/stores/bodyStore'
 import { TrendChart } from '@/components/ui/TrendChart'
-import { recognizeBodyComposition } from '@/cloudbase/services/recognizeApi'
+import { recognizeBodyComposition } from '@/cloudbase/services/recognize'
 import { useToast } from '@/components/common'
 import { CardSkeleton } from '@/components/common/Loading'
 
@@ -60,7 +60,6 @@ interface BodyRecord {
 export function MyBodyDataPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | '3months'>('month')
   const [showAllMetrics, setShowAllMetrics] = useState(false)
-  const [showCameraModal, setShowCameraModal] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisResult, setAnalysisResult] = useState<Partial<BodyRecord> | null>(null)
@@ -239,7 +238,6 @@ export function MyBodyDataPage() {
     if (!file) return
 
     setIsAnalyzing(true)
-    setShowCameraModal(false)
 
     try {
       // 将图片转换为 base64
@@ -294,23 +292,6 @@ export function MyBodyDataPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
-  // 启动摄像头
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-      }
-      setShowCameraView(true)
-    } catch (error) {
-      console.error('[MyBodyData] 无法访问摄像头:', error)
-      toast.error('无法访问摄像头，请确保已授权相机权限')
-    }
-  }
-
   // 停止摄像头
   const stopCamera = () => {
     if (streamRef.current) {
@@ -326,7 +307,6 @@ export function MyBodyDataPage() {
 
     setIsAnalyzing(true)
     stopCamera()
-    setShowCameraModal(false)
 
     try {
       // 从 video 元素捕获画面
@@ -446,17 +426,17 @@ export function MyBodyDataPage() {
     <div className="space-y-4 pb-24">
       {/* 操作入口卡片 */}
       <div className="grid grid-cols-2 gap-3">
-        {/* AI拍照识别 */}
+        {/* AI识别 - 相册导入 */}
         <Card className="p-4">
           <button
-            onClick={() => setShowCameraModal(true)}
+            onClick={() => fileInputRef.current?.click()}
             className="w-full flex flex-col items-center gap-2"
           >
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
               <Camera className="w-6 h-6 text-white" />
             </div>
-            <span className="text-sm font-medium">AI拍照识别</span>
-            <span className="text-xs text-gray-400">拍照/导入图片</span>
+            <span className="text-sm font-medium">相册导入</span>
+            <span className="text-xs text-gray-400">从相册选择图片</span>
           </button>
         </Card>
 
@@ -716,66 +696,14 @@ export function MyBodyDataPage() {
         </div>
       )}
 
-      {/* AI拍照识别弹窗 */}
-      {showCameraModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end pb-[144px]">
-          <div className="w-full bg-gray-900 rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto">
-            <div className="w-12 h-1 bg-gray-600 rounded-full mx-auto mb-6" />
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold">AI拍照识别</h3>
-              <button onClick={() => setShowCameraModal(false)} className="text-gray-400">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            
-            <p className="text-gray-400 text-sm mb-4">
-              拍摄或上传体成分检测仪/智能秤的屏幕照片，AI将自动识别并提取数据
-            </p>
-
-            {/* 隐藏的文件输入 */}
-            <input
-              type="file"
-              accept="image/*"
-              ref={fileInputRef}
-              onChange={handleImageUpload}
-              className="hidden"
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* 拍照 */}
-              <button
-                onClick={startCamera}
-                className="flex flex-col items-center gap-3 p-6 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
-              >
-                <div className="w-16 h-16 rounded-full bg-purple-500/30 flex items-center justify-center">
-                  <Camera className="w-8 h-8 text-purple-400" />
-                </div>
-                <span className="font-medium">拍照识别</span>
-                <span className="text-xs text-gray-400">使用相机拍摄</span>
-              </button>
-
-              {/* 从相册选择 */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex flex-col items-center gap-3 p-6 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
-              >
-                <div className="w-16 h-16 rounded-full bg-pink-500/30 flex items-center justify-center">
-                  <Upload className="w-8 h-8 text-pink-400" />
-                </div>
-                <span className="font-medium">相册导入</span>
-                <span className="text-xs text-gray-400">选择已有图片</span>
-              </button>
-            </div>
-
-            <button
-              onClick={() => setShowCameraModal(false)}
-              className="w-full mt-4 py-3 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      )}
+      {/* 隐藏的文件输入 */}
+      <input
+        type="file"
+        accept="image/*"
+        ref={fileInputRef}
+        onChange={handleImageUpload}
+        className="hidden"
+      />
 
       {/* 手动添加弹窗 */}
       {showAddModal && (

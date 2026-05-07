@@ -51,7 +51,7 @@ const NutritionProgress = memo(function NutritionProgress({
         {/* 碳水 */}
         <div>
           <div className="flex justify-between text-xs mb-1">
-            <span className="text-purple-400">碳水</span>
+            <span style={{ color: '#a78bfa' }}>碳水</span>
             <span className="text-gray-400">{todayCarbs}/{carbsTarget}g</span>
           </div>
           <Progress value={Math.min(carbsPercent, 100)} className="h-2" indicatorClassName="bg-purple-500" />

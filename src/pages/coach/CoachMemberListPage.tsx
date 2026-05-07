@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Filter, Users, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
-import { coachApi } from '@/services/api'
+import { useAuth } from '@/contexts/AuthContext'
+import { getCoachMemberList } from '@/cloudbase/services/coach'
 
 // 生成首字母头像
 function Avatar({ name, size = 48 }: { name: string; size?: number }) {
@@ -42,33 +43,32 @@ interface Member {
 
 export function CoachMemberListPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState<string>('all')
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    coachApi.getMyMembers().then(res => {
-      if (res.success && res.data) {
-        // 直接使用 API 返回的真实数据
-        setMembers(res.data.map(m => ({
-          id: m.id,
-          name: m.name || '未知用户',
-          avatar: m.avatar || '',
-          goal: m.goal || '维持',
-          week: m.week || 1,
-          status: m.warnings === 0 ? 'normal' : m.warnings === 1 ? 'warning' : 'danger',
-          statusText: m.warnings === 0 ? '正常' : m.warnings === 1 ? '轻微偏离' : '严重偏离',
-          weight: m.weight || 0,
-          fat: m.bodyFat || 0,
-          lastUpdate: m.lastRecord || '暂无记录',
-          hasPlan: m.hasPlan ?? false,
-          joinDate: m.joinDate || '',
-        })))
-      }
+    if (!user?.id) return
+    getCoachMemberList(user.id).then(list => {
+      setMembers(list.map(m => ({
+        id: m.id,
+        name: m.name,
+        avatar: m.avatar,
+        goal: m.goal,
+        week: m.week,
+        status: m.warnings === 0 ? 'normal' : m.warnings === 1 ? 'warning' : 'danger',
+        statusText: m.warnings === 0 ? '正常' : m.warnings === 1 ? '轻微偏离' : '严重偏离',
+        weight: m.weight,
+        fat: m.bodyFat,
+        lastUpdate: m.lastRecord || '暂无记录',
+        hasPlan: m.hasPlan,
+        joinDate: m.joinDate,
+      })))
       setLoading(false)
-    })
-  }, [])
+    }).catch(() => setLoading(false))
+  }, [user?.id])
 
   const filters = [
     { id: 'all', name: '全部会员' },
@@ -113,16 +113,9 @@ export function CoachMemberListPage() {
     if (activeFilter === 'warning' && member.status !== 'danger' && member.status !== 'warning') {
       return false
     }
-    // 按目标筛选
-    if (activeFilter === 'fat-loss' && member.goal !== '减脂') {
-      return false
-    }
-    if (activeFilter === 'muscle' && member.goal !== '增肌') {
-      return false
-    }
-    if (activeFilter === 'maintain' && member.goal !== '维持') {
-      return false
-    }
+    if (activeFilter === 'fat-loss' && member.goal !== '减脂') return false
+    if (activeFilter === 'muscle' && member.goal !== '增肌') return false
+    if (activeFilter === 'maintain' && member.goal !== '维持') return false
     return true
   })
 
