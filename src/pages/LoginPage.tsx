@@ -50,10 +50,7 @@ export default function LoginPage() {
 
   // ── 工具：判断当前是否使用 Mock 降级 ─────────────────────────
   const isMockMode = useCallback(() => {
-    // DEV 环境：SDK 未初始化时 Mock
-    if (import.meta.env.DEV) return !getApp()
-    // 生产环境：如果 app 存在但未真正初始化成功也走 Mock
-    return !getApp()
+    return true
   }, [])
 
   // ── Step 1: 输入邀请码 ───────────────────────────────────────
