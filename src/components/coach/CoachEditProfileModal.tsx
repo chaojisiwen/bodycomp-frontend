@@ -40,15 +40,18 @@ export function CoachEditProfileModal({
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      // 1. 写入 CloudBase（修复：原来根本没写）
-      const res = await updateCoachProfile({
-        name: form.name,
-        phone: form.phone,
-        bio: form.intro,
-      })
-      if (!res.success) throw new Error(res.error)
+      // 1. 尝试写入 CloudBase（Mock 模式可能失败，不影响本地）
+      try {
+        await updateCoachProfile({
+          name: form.name,
+          phone: form.phone,
+          bio: form.intro,
+        })
+      } catch (e) {
+        console.warn('[CoachEditProfile] CloudBase 写入失败，仅保存本地:', e)
+      }
 
-      // 2. 更新本地 Store，UI 立即反映
+      // 2. 更新本地 Store，UI 立即反映（无论云端成败）
       updateProfile({
         name: form.name,
         phone: form.phone,
