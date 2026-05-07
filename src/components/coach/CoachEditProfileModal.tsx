@@ -41,7 +41,7 @@ export function CoachEditProfileModal({
     setIsSaving(true)
     try {
       // 1. 写入 CloudBase（修复：原来根本没写）
-      const res = await updateCoachProfile(coachId, {
+      const res = await updateCoachProfile({
         name: form.name,
         phone: form.phone,
         bio: form.intro,

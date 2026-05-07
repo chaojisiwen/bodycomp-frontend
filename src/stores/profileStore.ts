@@ -11,7 +11,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { getUserInfo } from '@/cloudbase/services'
-import type { ICoach } from '@/cloudbase/types'
 
 interface UserGoal {
   targetWeight: number

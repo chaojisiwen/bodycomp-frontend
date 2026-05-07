@@ -156,7 +156,10 @@ export function MemberProfilePage() {
 
   // ── profileStore（头像、姓名、会员编号、打卡天数、目标） ──
   const { profile, setProfile, setGoal, fetchProfile, hasCoach, setHasCoach, currentCoach, setCoach } = useProfileStore()
-  const { name, memberId, openid, checkInDays, goal, phone: storedPhone, avatar: storedAvatar } = profile
+  const { name, memberId, checkInDays, goal, phone: storedPhone, avatar: storedAvatar } = profile
+  // openid 在 UserProfile 中不存在，从 auth user 获取
+  const openid = (user as any)?.id || ''
+  const coachAvatar = (currentCoach as any)?.avatar || ''
   const { notifications, unreadCount } = useNotificationStore()
 
   // ── 首次挂载：从 CloudBase 拉取用户信息（同步 openid + 确保 DB 记录存在） ──
@@ -392,7 +395,7 @@ export function MemberProfilePage() {
           </div>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-lg font-bold">
-              {currentCoach?.avatar}
+              {coachAvatar}
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
@@ -625,7 +628,7 @@ export function MemberProfilePage() {
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-3 py-2">
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-3xl font-bold">
-              {currentCoach?.avatar}
+              {coachAvatar}
             </div>
             <h4 className="text-xl font-bold">{currentCoach?.name}</h4>
             <div className="flex items-center gap-1">

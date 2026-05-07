@@ -23,9 +23,9 @@ export function RecognizePage() {
   const { setCurrentResult, clearCurrentResult, history } = useRecognizeStore()
   const { addMeal } = useMealStore()
   const { profile } = useProfileStore()
-  // 直接从 store 读取 fistCalibration，避免闭包陷阱
-  const fistCalibration = profile.fistCalibration
-  const setFistCalibration = useProfileStore((s) => s.setFistCalibration)
+  // 直接从 store 读取 fistCalibration（本地存储，非 profile 字段）
+  const fistCalibration = (profile as any).fistCalibration
+  const setFistCalibration = useProfileStore((s) => (s as any).setFistCalibration)
   const [recognizedFoods, setRecognizedFoods] = useState<RecognizedFoodItem[]>([])
   const [recognizedAnalysis, setRecognizedAnalysis] = useState<RecognizeAnalysis | null>(null)
   const [isMockData, setIsMockData] = useState(false)

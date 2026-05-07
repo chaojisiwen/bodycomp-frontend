@@ -23,7 +23,7 @@ export async function getExercises(options?: {
     const db = getApp()?.database()
     if (!db) return []
 
-    let query = db.collection(COLLECTIONS.EXERCISES)
+    let query: any = db.collection(COLLECTIONS.EXERCISES)
 
     // 用户过滤（必须，防止返回所有人的数据）
     const uid = getCurrentUserId()
@@ -38,7 +38,6 @@ export async function getExercises(options?: {
       const endOfDay = new Date(options.date)
       endOfDay.setHours(23, 59, 59, 999)
 
-      // @ts-expect-error SDK 类型与本地定义不匹配
       query = query.where({
         exercise_date: db.command.gte(startOfDay.getTime()).and(db.command.lte(endOfDay.getTime())),
       })
