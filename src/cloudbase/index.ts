@@ -79,12 +79,9 @@ export async function initCloudbase(config?: Partial<typeof CLOUDBASE_CONFIG>): 
       // 非 DEV 环境：匿名登录失败意味着后续所有 CloudBase 操作均不可用
       // 必须阻断初始化，让调用方明确知道失败原因
       if (!import.meta.env.DEV) {
-        console.error('[CloudBase] ❌ 生产环境匿名登录失败，SDK 不可用')
-        // 抛出明确可捕获的错误，而非静默降级
-        throw new Error(
-          `CloudBase 初始化失败：域名 "${window.location.hostname}" 未加入安全域名白名单。` +
-          '请在腾讯云云开发控制台 → 安全配置 → 安全域名中添加此域名。'
-        )
+        console.warn('[CloudBase] ⚠️ 生产环境匿名登录失败，降级到 Mock 模式')
+        isInitialized = true // 标记已尝试，避免重复
+        return false
       }
       // DEV 环境：继续执行（允许本地调试时跳过匿名登录）
       console.warn('[CloudBase] DEV 环境，跳过匿名登录继续初始化')
