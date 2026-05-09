@@ -54,6 +54,8 @@ interface ProfileState {
   hasCoach: boolean
   isLoading: boolean
   error: string | null
+  /** 用户是否在本地编辑过 name（防止 fetchProfile 时被云端覆盖） */
+  nameEdited: boolean
 
   fetchProfile: () => Promise<void>
   setProfile: (partial: Partial<UserProfile>) => void
@@ -72,6 +74,7 @@ export const useProfileStore = create<ProfileState>()(
       hasCoach: false,
       isLoading: false,
       error: null,
+      nameEdited: false,
 
       fetchProfile: async () => {
         set({ isLoading: true })
@@ -81,8 +84,10 @@ export const useProfileStore = create<ProfileState>()(
             set((state) => ({
               profile: {
                 ...state.profile,
-                // name: 用户编辑过则保留本地（非默认值），否则用云端值
-                name: state.profile.name !== '用户' ? state.profile.name : (user.nickname || user.name || state.profile.name),
+                // name: 用户编辑过则保留本地（nameEdited=true），否则用云端值
+                name: state.nameEdited
+                  ? state.profile.name || DEFAULT_PROFILE.name
+                  : (user.nickname || user.name || state.profile.name),
                 phone: user.phone || state.profile.phone,
                 avatar: user.avatar || state.profile.avatar,
                 memberId: user._id || state.profile.memberId,
@@ -131,6 +136,8 @@ export const useProfileStore = create<ProfileState>()(
       setProfile: (partial) =>
         set((state) => ({
           profile: { ...state.profile, ...partial },
+          // 如果更新了 name，标记 nameEdited
+          nameEdited: partial.name !== undefined ? true : state.nameEdited,
         })),
 
       setGoal: (goal) =>
@@ -154,6 +161,7 @@ export const useProfileStore = create<ProfileState>()(
           hasCoach: false,
           isLoading: false,
           error: null,
+          nameEdited: false,
         }),
     }),
     {
@@ -162,6 +170,7 @@ export const useProfileStore = create<ProfileState>()(
         profile: state.profile,
         currentCoach: state.currentCoach,
         hasCoach: state.hasCoach,
+        nameEdited: state.nameEdited,
       }),
     }
   )

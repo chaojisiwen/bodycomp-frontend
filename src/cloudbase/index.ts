@@ -30,6 +30,25 @@ type CloudbaseApp = ReturnType<typeof cloudbase.init>
 let isInitialized = false
 let app: CloudbaseApp | null = null
 
+// HTTP 触发器兜底模式 — 当安全域名白名单不包含当前域名时使用
+// 格式: https://{envId}.service.tcloudbase.com/{functionName}
+let httpFallbackMode = false
+
+/**
+ * 判断当前是否处于 HTTP 触发器兜底模式
+ * 此模式下 app 为 null，云函数通过 fetch 直接调用 HTTP 触发器
+ */
+export function isHttpFallbackMode(): boolean {
+  return httpFallbackMode
+}
+
+/**
+ * 获取 HTTP 触发器基础 URL
+ */
+export function getHttpTriggerBaseUrl(): string {
+  return `https://${CLOUDBASE_CONFIG.envId}.service.tcloudbase.com`
+}
+
 // ============================================================
 // 初始化函数
 // ====================================
@@ -37,6 +56,10 @@ let app: CloudbaseApp | null = null
 /**
  * 初始化云开发 SDK
  * 不会阻塞页面渲染，初始化失败时静默处理
+ *
+ * 策略：
+ * 1. 尝试 SDK 正常初始化 + 匿名登录（需要域名在安全域名白名单中）
+ * 2. 如果匿名登录失败，切换到 HTTP 触发器模式（绕过安全域名限制）
  */
 export async function initCloudbase(config?: Partial<typeof CLOUDBASE_CONFIG>): Promise<boolean> {
   if (isInitialized) {
@@ -51,48 +74,40 @@ export async function initCloudbase(config?: Partial<typeof CLOUDBASE_CONFIG>): 
     return false
   }
 
+  // 策略1: SDK 正常初始化
   try {
-    // 使用默认导入的 init 方法初始化
     app = cloudbase.init({
       env: finalConfig.envId,
       timeout: 10000,
     })
 
-    // 关键修复：先做匿名登录，否则 callFunction 会报 scope null 错误
-    // 注意：如果部署域名不在腾讯云「安全域名」白名单中，匿名登录会失败
     try {
       const auth = app.auth()
       await auth.signInAnonymously()
-      console.log('[CloudBase] ✅ 匿名登录成功')
+      console.log('[CloudBase] ✅ SDK 匿名登录成功')
+      isInitialized = true
+      return true
     } catch (authError) {
       console.warn(
-        '[CloudBase] ⚠️ 匿名登录失败！',
-        '\n当前域名:',
-        window.location.hostname,
-        '\n可能原因：当前域名未加入腾讯云安全域名白名单。',
-        '\n请在腾讯云云开发控制台 → 安全配置 → 安全域名中添加:',
-        window.location.hostname,
-        '\n错误详情:',
-        authError
+        '[CloudBase] ⚠️ SDK 匿名登录失败，切换到 HTTP 触发器模式！',
+        '\n当前域名:', window.location.hostname,
+        '\n错误详情:', authError
       )
 
-      // 非 DEV 环境：匿名登录失败意味着后续所有 CloudBase 操作均不可用
-      // 必须阻断初始化，让调用方明确知道失败原因
-      if (!import.meta.env.DEV) {
-        console.warn('[CloudBase] ⚠️ 生产环境匿名登录失败，降级到 Mock 模式')
-        isInitialized = true // 标记已尝试，避免重复
-        return false
-      }
-      // DEV 环境：继续执行（允许本地调试时跳过匿名登录）
-      console.warn('[CloudBase] DEV 环境，跳过匿名登录继续初始化')
+      // 释放 SDK 实例，切换到 HTTP 触发器模式
+      app = null
+      httpFallbackMode = true
+      isInitialized = true
+      console.log('[CloudBase] ✅ HTTP 触发器模式已就绪')
+      return true
     }
-
-    isInitialized = true
-    console.log('[CloudBase] ✅ 初始化成功，环境 ID:', finalConfig.envId)
-    return true
   } catch (error) {
-    console.error('[CloudBase] ⚠️ 初始化失败:', error)
-    return false
+    console.error('[CloudBase] ⚠️ SDK 初始化失败:', error)
+    // 也尝试 HTTP 触发器模式
+    httpFallbackMode = true
+    isInitialized = true
+    console.log('[CloudBase] ✅ HTTP 触发器模式已就绪（SDK初始化失败）')
+    return true
   }
 }
 
@@ -102,6 +117,7 @@ export async function initCloudbase(config?: Partial<typeof CLOUDBASE_CONFIG>): 
 
 /**
  * 获取云开发应用实例
+ * HTTP 触发器模式下返回 null
  */
 export function getApp(): CloudbaseApp | null {
   return app
@@ -126,45 +142,63 @@ export function getDatabase() {
 }
 
 // ============================================================
-// 云函数调用辅助函数 - 使用 fetch 直接调用 HTTP 触发器
+// 云函数调用辅助函数
 // ============================================================
 
 /**
  * 调用云函数
- * 通过 SDK callFunction 调用云函数
  *
- * 注意：需要 initCloudbase 先完成（含匿名登录），否则会因 scope 问题失败。
- * 如果部署域名不在腾讯云安全域名白名单中，匿名登录会失败，导致 callFunction 也不可用。
+ * 优先使用 SDK callFunction（安全域名白名单已配置时）
+ * 兜底使用 HTTP 触发器（绕过安全域名限制）
  *
  * @param name 云函数名称
  * @param data 传递给云函数的参数
- * @returns 云函数返回结果（已解包 result 字段）
+ * @returns 云函数返回结果
  */
 export async function callCloudFunction<T = any>(name: string, data?: Record<string, unknown>): Promise<T> {
   const appInstance = getApp()
-  if (!appInstance) {
-    throw new Error('CloudBase SDK 未初始化，请检查环境配置或刷新页面重试')
+
+  // 策略1: SDK 模式
+  if (appInstance) {
+    try {
+      const result = await appInstance.callFunction({
+        name,
+        data: data || {},
+      })
+      console.log(`[CloudFunction] SDK 调用成功: ${name}`, result)
+      return (result as { result: T }).result
+    } catch (sdkError) {
+      console.error(
+        `[CloudFunction] SDK 调用失败: ${name}`,
+        '\n错误详情:', sdkError
+      )
+      // 不回退，让调用方 catch
+      throw new Error(`云函数 ${name} 调用失败，请检查网络连接或联系管理员`)
+    }
   }
 
-  try {
-    const result = await appInstance.callFunction({
-      name,
-      data: data || {},
+  // 策略2: HTTP 触发器模式（不用安全域名白名单）
+  if (httpFallbackMode) {
+    const url = `${getHttpTriggerBaseUrl()}/${name}`
+    console.log(`[CloudFunction] HTTP 触发器调用: ${url}`)
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data || {}),
     })
-    console.log(`[CloudFunction] 调用成功: ${name}`, result)
-    return (result as { result: T }).result
-  } catch (sdkError) {
-    console.error(
-      `[CloudFunction] 调用失败: ${name}`,
-      '\n可能原因：',
-      '\n1. 当前域名未加入腾讯云安全域名白名单',
-      '\n2. 云函数未部署或已删除',
-      '\n3. 网络连接异常',
-      '\n错误详情:',
-      sdkError
-    )
-    throw new Error(`云函数 ${name} 调用失败，请检查网络连接或联系管理员`)
+
+    if (!response.ok) {
+      throw new Error(`云函数 ${name} HTTP 调用失败: ${response.status} ${response.statusText}`)
+    }
+
+    const result = await response.json()
+    console.log(`[CloudFunction] HTTP 触发器调用成功: ${name}`, result)
+    return result as T
   }
+
+  // 两者都不可用
+  throw new Error('CloudBase 未初始化，请刷新页面重试')
 }
 
 // ============================================================

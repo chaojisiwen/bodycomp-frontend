@@ -12,6 +12,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getApp, initCloudbase, callCloudFunction } from '@/cloudbase'
+import { setCurrentUser } from '@/cloudbase/services/auth'
 
 // ── Mock 白名单（仅开发环境使用）────────────────────────────
 const MOCK_VALID_CODES = [
@@ -49,8 +50,10 @@ export default function LoginPage() {
   const formRef = useRef<HTMLFormElement>(null)
 
   // ── 工具：判断当前是否使用 Mock 降级 ─────────────────────────
+  // Mock 模式已被移除（2026-05-09），所有登录请求通过 CloudBase 后端
+  // 此处保留 isMockMode 为 false 以清理旧代码分支，后续可整体移除 Mock 代码
   const isMockMode = useCallback(() => {
-    return true
+    return false
   }, [])
 
   // ── Step 1: 输入邀请码 ───────────────────────────────────────
@@ -285,14 +288,31 @@ export default function LoginPage() {
     // ⚠️ 先清除旧缓存，防止切换账号时残留旧 ID 导致数据写错
     localStorage.removeItem('user')
 
+    const userId = data?.uid || data?.userId || inviteCode
+
     const userData = {
-      id: data?.uid || data?.userId || inviteCode,
+      id: userId,
       name: data?.name || '用户',
       phone: '',
       role: role as 'member' | 'coach',
       coachId: '',
       inviteCode, // 保存邀请码，供 CloudBase 操作（绑定教练/更新教练资料）使用
     }
+
+    // 写入 setCurrentUser（供 getCurrentUser() / bindCoach 等函数获取用户信息）
+    setCurrentUser({
+      _id: userId,
+      invite_code: inviteCode,
+      role,
+      name: data?.name || '用户',
+      nickname: '',
+      avatar: '',
+      phone: '',
+      password: '',
+      target_weight: 0,
+      created_at: new Date(),
+      updated_at: new Date(),
+    })
 
     login(userData)
 

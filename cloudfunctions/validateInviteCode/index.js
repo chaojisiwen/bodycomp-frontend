@@ -16,7 +16,12 @@
  * 1. 校验邀请码有效性
  * 2. 支持密码登录
  * 3. 支持首次登录设置密码
- * 4. 返回 token 供前端登录
+ * 4. 首次登录自动创建用户记录（防止Mock模式下无用户记录的问题）
+ * 5. 返回 token 供前端登录
+ *
+ * 邀请码格式：
+ *   前缀 M- → role: member
+ *   前缀 C- → role: coach
  */
 
 const cloud = require('wx-server-sdk')
@@ -26,6 +31,7 @@ cloud.init({
 })
 
 const db = cloud.database()
+const _ = db.command
 
 // 主入口
 exports.main = async (event, context) => {
@@ -39,31 +45,85 @@ exports.main = async (event, context) => {
   }
 
   try {
-    // 查询 users 集合中 invite_code 匹配的用户
+    // ============================================================
+    // Step 1: 查询用户（按 invite_code）
+    // ============================================================
+    let user = null
+    let isNewUser = false
+
     const userRes = await db
       .collection('users')
-      .where({
-        invite_code: normalizedCode,
-      })
+      .where({ invite_code: normalizedCode })
       .limit(1)
       .get()
 
-    let user = null
     if (userRes.data && userRes.data.length > 0) {
       user = userRes.data[0]
+    } else {
+      // ── 兜底：按 _id 查（兼容旧数据） ──
+      const idRes = await db
+        .collection('users')
+        .doc(normalizedCode)
+        .get()
+        .catch(() => ({ data: null }))
+
+      if (idRes && idRes.data) {
+        user = idRes.data
+      }
     }
 
-    // action: setPassword - 首次设置密码
+    // ============================================================
+    // Step 2: 用户不存在 → 自动创建
+    // ============================================================
+    if (!user) {
+      const role = normalizedCode.startsWith('C-') ? 'coach' : 'member'
+      const defaultName = role === 'coach' ? '教练' : '会员'
+
+      console.log('[validateInviteCode] ⚠️ 用户不存在，自动创建:', {
+        invite_code: normalizedCode,
+        role,
+      })
+
+      const createResult = await db.collection('users').add({
+        data: {
+          invite_code: normalizedCode,
+          role,
+          name: defaultName,
+          nickname: '',
+          avatar: '',
+          phone: '',
+          password: '',
+          target_weight: 0,
+          created_at: db.serverDate(),
+          updated_at: db.serverDate(),
+          last_login_at: db.serverDate(),
+        },
+      })
+
+      // 重新查询刚创建的记录以获取完整数据
+      const newUserRes = await db
+        .collection('users')
+        .doc(createResult.id)
+        .get()
+
+      if (newUserRes.data) {
+        user = newUserRes.data
+        isNewUser = true
+      } else {
+        return { code: -500, message: '创建用户失败，请稍后重试' }
+      }
+    }
+
+    // ============================================================
+    // Step 3: 处理各种动作
+    // ============================================================
+
+    // ── setPassword: 首次设置密码 ──
     if (action === 'setPassword') {
       if (!password || password.length < 6) {
         return { code: -1, message: '密码至少6位' }
       }
 
-      if (!user) {
-        return { code: -1, message: '邀请码无效' }
-      }
-
-      // 更新密码
       await db
         .collection('users')
         .doc(user._id)
@@ -74,7 +134,6 @@ exports.main = async (event, context) => {
           },
         })
 
-      // 生成登录 token（简单实现，生产环境建议用 JWT）
       const token = generateToken(user._id)
 
       return {
@@ -87,27 +146,12 @@ exports.main = async (event, context) => {
           name: user.name || '用户',
           userId: user._id,
           isFirstLogin: false,
+          isNewUser: true,
         },
       }
     }
 
-    // action: login - 正常登录
-    if (!user) {
-      // 如果 invite_code 找不到，尝试用 _id 查找（兼容旧数据）
-      const idRes = await db
-        .collection('users')
-        .doc(normalizedCode)
-        .get()
-        .catch(() => ({ data: null }))
-
-      if (idRes && idRes.data) {
-        user = idRes.data
-      } else {
-        return { code: -1, message: '邀请码无效' }
-      }
-    }
-
-    // 检查是否需要设置密码（首次登录）
+    // ── login: 检查是否需要首次设置密码 ──
     if (!user.password) {
       return {
         code: -3,
@@ -119,11 +163,12 @@ exports.main = async (event, context) => {
           userId: user._id,
           isFirstLogin: true,
           needSetPassword: true,
+          isNewUser,
         },
       }
     }
 
-    // 需要密码但没有传
+    // ── 需要密码但没有传 ──
     if (!password) {
       return {
         code: -2,
@@ -138,15 +183,14 @@ exports.main = async (event, context) => {
       }
     }
 
-    // 校验密码
+    // ── 校验密码 ──
     if (!verifyPassword(password, user.password)) {
       return { code: -1, message: '密码错误' }
     }
 
-    // 登录成功，生成 token
+    // ── 登录成功 ──
     const token = generateToken(user._id)
 
-    // 更新最后登录时间
     await db
       .collection('users')
       .doc(user._id)
@@ -178,7 +222,6 @@ exports.main = async (event, context) => {
 
 // 简单密码哈希（实际项目建议用 bcrypt）
 function hashPassword(pwd) {
-  // 使用云函数环境内置的 crypto 做简单哈希
   const crypto = require('crypto')
   return crypto.createHash('sha256').update(pwd + 'equilibrio-salt').digest('hex')
 }

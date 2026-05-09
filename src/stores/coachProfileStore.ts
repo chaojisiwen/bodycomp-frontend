@@ -2,7 +2,8 @@
  * 教练个人信息状态管理
  *
  * 管理教练头像、昵称、资质、评分、会员数等数据
- * 采用「云数据库优先」策略
+ * 采用「用户编辑优先」策略——用户在本地修改过名字后，
+ * fetchProfile 不会用云端数据覆盖已编辑的名字。
  */
 
 import { create } from 'zustand'
@@ -37,6 +38,8 @@ interface CoachProfileState {
   isLoading: boolean
   error: string | null
   lastSyncedAt: number | null
+  /** 用户是否在本地编辑过 name（防止 fetchProfile 时被云端覆盖） */
+  nameEdited: boolean
 
   // 操作
   fetchProfile: (userId?: string) => Promise<void>
@@ -73,6 +76,7 @@ export const useCoachProfileStore = create<CoachProfileState>()(
       isLoading: false,
       error: null,
       lastSyncedAt: null,
+      nameEdited: false,
 
       // 从云数据库拉取教练信息
       fetchProfile: async (userId?: string) => {
@@ -94,10 +98,10 @@ export const useCoachProfileStore = create<CoachProfileState>()(
 
             const profile: CoachProfile = {
               id: coachId,
-              // name: 用户编辑过则保留本地（非默认值'教练'），否则用云端值
-              name: currentState.profile?.name && currentState.profile.name !== '教练'
-                ? currentState.profile.name
-                : ((coachData as ICoach & { name?: string }).name || coachData.title || '教练'),
+              // name: 用户编辑过则保留本地（nameEdited=true），否则用云端值
+              name: currentState.nameEdited
+                ? currentState.profile?.name || DEFAULT_PROFILE.name
+                : ((coachData as ICoach & { name?: string }).name || coachData.title || DEFAULT_PROFILE.name),
               avatar: (coachData as ICoach).avatar,
               phone: '', // 敏感信息不存储
               title: coachData.title,
@@ -141,6 +145,8 @@ export const useCoachProfileStore = create<CoachProfileState>()(
       updateProfile: (data) => {
         set((state) => ({
           profile: state.profile ? { ...state.profile, ...data } : { ...DEFAULT_PROFILE, ...data },
+          // 如果更新了 name，标记 nameEdited
+          nameEdited: data.name !== undefined ? true : state.nameEdited,
         }))
       },
     }),
@@ -149,6 +155,7 @@ export const useCoachProfileStore = create<CoachProfileState>()(
       partialize: (state) => ({
         profile: state.profile,
         lastSyncedAt: state.lastSyncedAt,
+        nameEdited: state.nameEdited,
       }),
     }
   )
