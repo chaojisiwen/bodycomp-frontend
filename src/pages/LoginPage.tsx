@@ -290,11 +290,14 @@ export default function LoginPage() {
 
     const userId = data?.uid || data?.userId || inviteCode
 
+    // 二次确认：根据邀请码前缀确保 role 正确（补齐后端修正）
+    const finalRole = role.startsWith('C-') ? 'coach' : role.startsWith('M-') ? 'member' : role
+
     const userData = {
       id: userId,
       name: data?.name || '用户',
       phone: '',
-      role: role as 'member' | 'coach',
+      role: finalRole as 'member' | 'coach',
       coachId: '',
       inviteCode, // 保存邀请码，供 CloudBase 操作（绑定教练/更新教练资料）使用
     }
@@ -303,12 +306,11 @@ export default function LoginPage() {
     setCurrentUser({
       _id: userId,
       invite_code: inviteCode,
-      role,
+      role: finalRole as 'member' | 'coach',
       name: data?.name || '用户',
       nickname: '',
       avatar: '',
       phone: '',
-      password: '',
       target_weight: 0,
       created_at: new Date(),
       updated_at: new Date(),

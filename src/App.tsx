@@ -4,6 +4,7 @@
 
 import { AuthProvider } from '@/contexts/AuthContext'
 import { CloudbaseProvider } from '@/contexts/CloudbaseContext'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ToastProvider } from '@/components/common'
 import { ErrorBoundary } from '@/components/common'
 import { Router } from '@/router'
@@ -11,13 +12,15 @@ import { Router } from '@/router'
 function App() {
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <CloudbaseProvider>
-          <AuthProvider>
-            <Router />
-          </AuthProvider>
-        </CloudbaseProvider>
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <CloudbaseProvider>
+            <AuthProvider>
+              <Router />
+            </AuthProvider>
+          </CloudbaseProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   )
 }

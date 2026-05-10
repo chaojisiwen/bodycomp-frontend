@@ -14,21 +14,24 @@ import { useLatestBodyRecord } from '@/stores/bodyStore'
 import { usePlanTarget, useSetPlanTarget } from '@/stores/planStore'
 import { BODY_GOAL_CONFIG, type BodyGoalMetric } from '@/stores/planStore'
 
-/** 计算进度百分比 */
-function calculateProgress(current: number, target: number, start: number, direction: 'decrease' | 'increase'): number {
-  if (direction === 'decrease') {
-    // 减少类：体重/体脂/腰围 → 越小越好
-    // 进度 100% = 达到目标值或更低
+/** 计算进度百分比 — 自动识别方向 */
+function calculateProgress(current: number, target: number, start: number): number {
+  // 根据当前值与目标值的关系自动判断方向
+  if (target > current) {
+    // 增肌方向：当前 < 目标，需要增加
+    if (current >= target) return 100
+    if (start >= target) return 0
+    const progress = ((current - start) / (target - start)) * 100
+    return Math.max(0, Math.min(100, Math.round(progress)))
+  } else if (target < current) {
+    // 减脂方向：当前 > 目标，需要减少
     if (current <= target) return 100
     if (start <= target) return 0
     const progress = ((start - current) / (start - target)) * 100
     return Math.max(0, Math.min(100, Math.round(progress)))
   } else {
-    // 增加类：肌肉量/蛋白质 → 越大越好
-    if (current >= target) return 100
-    if (start >= target) return 0
-    const progress = ((current - start) / (target - start)) * 100
-    return Math.max(0, Math.min(100, Math.round(progress)))
+    // 当前 == 目标，已达标
+    return 100
   }
 }
 
@@ -66,7 +69,7 @@ export function GoalProgressCard() {
   // 进度
   const progress =
     metric && currentValue !== undefined && target !== undefined && start !== undefined
-      ? calculateProgress(currentValue, target, start, config!.direction)
+      ? calculateProgress(currentValue, target, start)
       : 0
 
   // 差值
@@ -142,6 +145,12 @@ export function GoalProgressCard() {
               </p>
             </div>
             <div className="text-right">
+              {/* 方向标识 */}
+              {currentValue !== undefined && target !== undefined && (
+                <p className={'text-xs mb-1 ' + (currentValue > target ? 'text-blue-400' : 'text-purple-400')}>
+                  {currentValue > target ? '↓ 减脂中' : '↑ 增肌中'}
+                </p>
+              )}
               <p className="text-lg font-semibold text-gray-400">
                 {target !== undefined ? target : '--'}
                 <span className="text-xs font-normal text-gray-600 ml-1">{config?.unit}</span>
@@ -164,27 +173,15 @@ export function GoalProgressCard() {
             </span>
             {currentValue !== undefined && target !== undefined && (
               <span className="text-gray-500">
-                {config?.direction === 'decrease' ? (
-                  currentValue <= target ? (
-                    <span className="text-emerald-400 flex items-center gap-1">
-                      <TrendingDown className="w-3 h-3" /> 已达标！
-                    </span>
-                  ) : (
-                    <span className="text-gray-500">
-                      还差 <span className={colorClass}>{diff.toFixed(1)}</span> {config?.unit}
-                    </span>
-                  )
-                ) : (
-                  currentValue >= target ? (
-                    <span className="text-emerald-400 flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" /> 已达标！
-                    </span>
-                  ) : (
-                    <span className="text-gray-500">
-                      还差 <span className={colorClass}>{diff.toFixed(1)}</span> {config?.unit}
-                    </span>
-                  )
-                )}
+                {currentValue >= target ? (
+                  <span className="text-emerald-400 flex items-center gap-1">
+                    {currentValue > target ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />} 已达标！
+                  </span>
+                ) : currentValue < target ? (
+                  <span className="text-gray-500">
+                    还差 <span className="text-purple-400">{(target - currentValue).toFixed(1)}</span> {config?.unit}
+                  </span>
+                ) : null}
               </span>
             )}
           </div>
@@ -229,7 +226,7 @@ function GoalEditor({ currentMetric, currentTarget, onClose }: GoalEditorProps) 
     const target = Number(targetValue)
     if (isNaN(target)) return
 
-    // 起始值 = 当前最新记录值（如果没有则用目标值）
+    // 起始值 = 始终用最新当前值，确保进度动态更新
     const start = currentValue !== undefined ? Number(currentValue) : target
 
     setPlanTarget({

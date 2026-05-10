@@ -9,6 +9,9 @@ import { useLatestBodyRecord, useBodyTrend, useBodyStore } from '@/stores/bodySt
 import { useNotificationStore } from '@/stores/notificationStore'
 import { getCoaches } from '@/cloudbase/services/coach'
 import { usePlanTarget, useSetPlanTarget } from '@/stores/planStore'
+import type { PlanTypeOption } from '@/stores/planStore'
+import { PLAN_TYPE_LABELS, DAY_SCHEDULE_LABELS, WEEKDAY_LABELS, WEEKDAY_ZH, NUTRIENT_STYLES } from '@/stores/planStore'
+import type { DaySchedule } from '@/stores/planStore'
 import { useProfileStore } from '@/stores/profileStore'
 import { FullPageLoader, useToast } from '@/components/common'
 import { GoalProgressCard } from '@/components/GoalProgressCard'
@@ -119,6 +122,11 @@ export function HomePage() {
     return 'text-emerald-400'
   }, [])
 
+  // ── 训练安排编辑状态 ──
+  const [editingDay, setEditingDay] = useState<keyof typeof WEEKDAY_ZH | null>(null)
+  const [editDayType, setEditDayType] = useState<DaySchedule['type']>('strength')
+  const [editDayNote, setEditDayNote] = useState('')
+
   return (
     <>
       {pageLoading ? (
@@ -138,7 +146,7 @@ export function HomePage() {
               <div>
                 <p className="text-sm text-emerald-400">当前目标</p>
                 <p className="text-lg font-bold">
-                  {planTarget.targetCalories <= 1600 ? '减脂' : planTarget.targetCalories >= 2200 ? '增肌' : '维持'}计划
+                  {PLAN_TYPE_LABELS[planTarget.planType]}
                   · 剩余{daysLeft > 0 ? daysLeft : 0}天
                 </p>
             </div>
@@ -171,11 +179,13 @@ export function HomePage() {
             <p className="text-xs text-gray-500">kcal</p>
           </CardContent>
         </Card>
-        <Card className="bg-emerald-500/10 border-emerald-500/20">
+        <Card className={calorieGap >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}>
           <CardContent className="p-3 text-center">
-            <p className="text-xs text-emerald-400 mb-1">缺口</p>
-            <p className={`text-xl font-bold ${getCalorieColor(calorieGap)}`}>
-              {calorieGap >= 0 ? '+' : ''}{calorieGap}
+            <p className={'text-xs mb-1 ' + (calorieGap >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+              {calorieGap >= 0 ? '亏损' : '盈余'}
+            </p>
+            <p className={'text-xl font-bold ' + getCalorieColor(calorieGap)}>
+              {calorieGap >= 0 ? '+' : ''}{Math.abs(calorieGap)}
             </p>
             <p className="text-xs text-gray-500">kcal</p>
           </CardContent>
@@ -211,7 +221,7 @@ export function HomePage() {
               <span style={{ color: '#a78bfa' }}>碳水</span>
               <span className="text-gray-400">{todayCarbs}/{carbsTarget}g</span>
             </div>
-            <Progress value={Math.min(carbsPercent, 100)} className="h-2" indicatorClassName="bg-purple-500" />
+            <Progress value={Math.min(carbsPercent, 100)} className="h-2" indicatorClassName="bg-purple-400" />
           </div>
         </CardContent>
       </Card>
@@ -303,7 +313,7 @@ export function HomePage() {
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Target className="w-5 h-5 text-emerald-400" />
-                {planTarget.targetCalories <= 1600 ? '减脂' : planTarget.targetCalories >= 2200 ? '增肌' : '维持'}计划详情
+                {editingGoal ? '修改计划' : PLAN_TYPE_LABELS[planTarget.planType]}详情
               </h3>
               <button
                 onClick={() => setShowPlanDetail(false)}
@@ -365,54 +375,166 @@ export function HomePage() {
             {/* 每日目标 */}
             <h4 className="text-sm font-medium text-gray-400 mb-3">每日营养目标</h4>
             <div className="grid grid-cols-2 gap-3 mb-6">
-              {[
-                { label: '热量', color: 'orange', key: 'targetCalories', unit: 'kcal' },
-                { label: '蛋白质', color: 'blue', key: 'targetProtein', unit: 'g' },
-                { label: '脂肪', color: 'yellow', key: 'targetFat', unit: 'g' },
-                { label: '碳水', color: 'purple', key: 'targetCarb', unit: 'g' },
-              ].map(item => (
-                <div key={item.key} className={`bg-${item.color}-500/10 rounded-xl p-4 text-center`}>
-                  <p className={`text-xs text-${item.color}-400 mb-1`}>{item.label}</p>
-                  {editingGoal ? (
-                    <input
-                      type="number"
-                      value={(planTarget as any)[item.key]}
-                      onChange={(e) => setPlanTarget({ ...planTarget, [item.key]: Number(e.target.value) })}
-                      className="w-20 text-center bg-white/10 rounded-lg px-2 py-1 text-xl font-bold border border-white/20 focus:border-emerald-400 focus:outline-none"
-                    />
-                  ) : (
-                    <p className={`text-xl font-bold text-${item.color}-400`}>{(planTarget as any)[item.key]}</p>
-                  )}
-                  <p className="text-xs text-gray-500">{item.unit}</p>
-                </div>
-              ))}
+              <div key="cal" className="bg-orange-400 bg-opacity-10 rounded-xl p-4 text-center">
+                <p className="text-xs text-orange-400 mb-1">热量</p>
+                {editingGoal ? (
+                  <input type="number" value={planTarget.targetCalories} onChange={(e) => setPlanTarget({ ...planTarget, targetCalories: Number(e.target.value) })} className="w-20 text-center bg-white/10 rounded-lg px-2 py-1 text-xl font-bold border border-white/20 focus:border-emerald-400 focus:outline-none" />
+                ) : (<p className="text-xl font-bold text-orange-400">{planTarget.targetCalories}</p>)}
+                <p className="text-xs text-gray-500">kcal</p>
+              </div>
+              <div key="pro" className="bg-blue-400 bg-opacity-10 rounded-xl p-4 text-center">
+                <p className="text-xs text-blue-400 mb-1">蛋白质</p>
+                {editingGoal ? (
+                  <input type="number" value={planTarget.targetProtein} onChange={(e) => setPlanTarget({ ...planTarget, targetProtein: Number(e.target.value) })} className="w-20 text-center bg-white/10 rounded-lg px-2 py-1 text-xl font-bold border border-white/20 focus:border-emerald-400 focus:outline-none" />
+                ) : (<p className="text-xl font-bold text-blue-400">{planTarget.targetProtein}</p>)}
+                <p className="text-xs text-gray-500">g</p>
+              </div>
+              <div key="fat" className="bg-yellow-400 bg-opacity-10 rounded-xl p-4 text-center">
+                <p className="text-xs text-yellow-400 mb-1">脂肪</p>
+                {editingGoal ? (
+                  <input type="number" value={planTarget.targetFat} onChange={(e) => setPlanTarget({ ...planTarget, targetFat: Number(e.target.value) })} className="w-20 text-center bg-white/10 rounded-lg px-2 py-1 text-xl font-bold border border-white/20 focus:border-emerald-400 focus:outline-none" />
+                ) : (<p className="text-xl font-bold text-yellow-400">{planTarget.targetFat}</p>)}
+                <p className="text-xs text-gray-500">g</p>
+              </div>
+              <div key="carb" className="bg-purple-400 bg-opacity-10 rounded-xl p-4 text-center">
+                <p className="text-xs text-purple-400 mb-1">碳水</p>
+                {editingGoal ? (
+                  <input type="number" value={planTarget.targetCarb} onChange={(e) => setPlanTarget({ ...planTarget, targetCarb: Number(e.target.value) })} className="w-20 text-center bg-white/10 rounded-lg px-2 py-1 text-xl font-bold border border-white/20 focus:border-emerald-400 focus:outline-none" />
+                ) : (<p className="text-xl font-bold text-purple-400">{planTarget.targetCarb}</p>)}
+                <p className="text-xs text-gray-500">g</p>
+              </div>
             </div>
 
-            {/* 最近体成分记录 */}
-            <h4 className="text-sm font-medium text-gray-400 mb-3">最近体成分记录</h4>
-            {bodyTrend.length > 0 ? (
-              <div className="space-y-2">
-                {bodyTrend.slice(0, 5).map((record, index) => (
-                  <div key={index} className="flex items-center justify-between bg-white/5 rounded-xl p-3">
-                    <span className="text-sm text-gray-400">
-                      {new Date(record.record_date!).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}
-                    </span>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm">
-                        体重 <span className="text-emerald-400 font-medium">{record.weight}kg</span>
-                      </span>
-                      {record.body_fat !== undefined && (
-                        <span className="text-sm">
-                          体脂 <span className="text-blue-400 font-medium">{record.body_fat}%</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+            {/* 计划类型选择（仅编辑模式） */}
+            {editingGoal && (
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-400 mb-3">选择计划类型</h4>
+                <div className="space-y-2">
+                  {[
+                    { key: 'fat-loss' as PlanTypeOption, label: '减脂计划', desc: '控制热量缺口，降低体脂率' },
+                    { key: 'muscle-gain' as PlanTypeOption, label: '增肌计划', desc: '热量盈余，增加肌肉量' },
+                    { key: 'body-shape' as PlanTypeOption, label: '塑形计划', desc: '均衡发展，优化体态线条' },
+                    { key: 'performance' as PlanTypeOption, label: '运动表现提升计划', desc: '提升力量、耐力、爆发力' },
+                  ].map(opt => (
+                    <button
+                      key={opt.key}
+                      onClick={() => setPlanTarget({ ...planTarget, planType: opt.key })}
+                      className={'w-full text-left p-3 rounded-xl border transition-colors ' + (planTarget.planType === opt.key ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-white/5 border-white/10 hover:bg-white/10')}
+                    >
+                      <p className="font-medium">{opt.label}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
-            ) : (
-              <div className="text-center py-6 text-gray-500 text-sm">
-                暂无体成分记录，<br />去「我的数据」页面添加第一条记录吧
+            )}
+
+            {/* 每周训练安排 */}
+            <h4 className="text-sm font-medium text-gray-400 mb-3">每周训练安排</h4>
+            <div className="space-y-2 mb-6">
+              {WEEKDAY_LABELS.map((dayKey) => {
+                const schedule = planTarget.weeklySchedule[dayKey]
+                // 非编辑模式：只展示已安排的
+                if (!editingGoal && !schedule) return null
+                return (
+                  <div key={dayKey} className="flex items-center gap-2">
+                    <span className="w-10 text-sm text-gray-400">{WEEKDAY_ZH[dayKey]}</span>
+                    {editingGoal ? (
+                      <button
+                        onClick={() => {
+                          if (editingDay === dayKey) { setEditingDay(null) }
+                          else {
+                            setEditDayType(schedule?.type || 'strength')
+                            setEditDayNote(schedule?.note || '')
+                            setEditingDay(dayKey)
+                          }
+                        }}
+                        className={'flex-1 p-2.5 rounded-xl text-sm text-left border transition-colors ' + (schedule ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-500 hover:bg-white/10')}
+                      >
+                        {schedule ? DAY_SCHEDULE_LABELS[schedule.type] + (schedule.note ? '（' + schedule.note + '）' : '') : '点击设置'}
+                      </button>
+                    ) : (
+                      <div className={'flex-1 p-2.5 rounded-xl text-sm text-left border ' + (schedule ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-500')}>
+                        {schedule ? DAY_SCHEDULE_LABELS[schedule.type] + (schedule.note ? '（' + schedule.note + '）' : '') : '未安排'}
+                      </div>
+                    )}
+                    {editingGoal && schedule && (
+                      <button
+                        onClick={() => {
+                          const newSchedule = { ...planTarget.weeklySchedule }
+                          delete newSchedule[dayKey]
+                          setPlanTarget({ ...planTarget, weeklySchedule: newSchedule })
+                        }}
+                        className="p-2 text-gray-500 hover:text-red-400"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                    {/* 非编辑模式：打卡复选框 */}
+                    {!editingGoal && schedule && (
+                      <button
+                        onClick={() => {
+                          const completed = planTarget.weeklyCompleted || {}
+                          const newCompleted = { ...completed }
+                          if (newCompleted[dayKey]) {
+                            delete newCompleted[dayKey]
+                          } else {
+                            newCompleted[dayKey] = Date.now()
+                          }
+                          setPlanTarget({ ...planTarget, weeklyCompleted: newCompleted })
+                        }}
+                        className={'w-7 h-7 rounded-md border flex items-center justify-center transition-colors ' + ((planTarget.weeklyCompleted || {})[dayKey] ? 'bg-emerald-500 border-emerald-500' : 'border-gray-500 hover:border-emerald-400')}
+                      >
+                        {(planTarget.weeklyCompleted || {})[dayKey] ? (
+                          <span className="text-white text-sm font-bold">✓</span>
+                        ) : null}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* 训练安排编辑弹窗 */}
+            {editingDay && (
+              <div className="bg-white/5 rounded-xl p-4 mb-6">
+                <p className="text-sm font-medium mb-3 text-gray-300">设置{WEEKDAY_ZH[editingDay]}训练</p>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  {[
+                    { key: 'strength' as DaySchedule['type'], label: '力量训练' },
+                    { key: 'cardio' as DaySchedule['type'], label: '心肺训练' },
+                    { key: 'aerobic' as DaySchedule['type'], label: '有氧训练' },
+                    { key: 'other' as DaySchedule['type'], label: '其他' },
+                  ].map(t => (
+                    <button
+                      key={t.key}
+                      onClick={() => setEditDayType(t.key)}
+                      className={'p-2 rounded-lg text-sm border transition-colors ' + (editDayType === t.key ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10')}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="mb-3">
+                  <input
+                    type="text"
+                    value={editDayNote}
+                    onChange={(e) => setEditDayNote(e.target.value)}
+                    placeholder="备注（可选）"
+                    className="w-full bg-white/10 rounded-lg px-3 py-2 text-sm border border-white/20 focus:border-emerald-400 focus:outline-none text-gray-200 placeholder-gray-500"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    const newSchedule = { ...planTarget.weeklySchedule }
+                    newSchedule[editingDay] = { type: editDayType, note: editDayNote || undefined }
+                    setPlanTarget({ ...planTarget, weeklySchedule: newSchedule })
+                    setEditingDay(null)
+                  }}
+                  className="w-full py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 transition-colors"
+                >
+                  确认
+                </button>
               </div>
             )}
 

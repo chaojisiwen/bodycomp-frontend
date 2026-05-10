@@ -1,0 +1,250 @@
+/* ============================================================
+   主题系统 — 深色/浅色切换
+   通过 html[data-theme="dark"|"light"] 控制
+   覆盖所有 Tailwind 类名，确保浅色模式每个元素都可见
+   ============================================================ */
+
+/* ── 深色主题（默认） ── */
+:root,
+html[data-theme="dark"] {
+  --bg-body: #0f172a;
+  --bg-card: #1e293b;
+  --bg-card-alt: #334155;
+  --bg-card-hover: #334155;
+  --bg-muted: rgba(255,255,255,.05);
+  --bg-muted-hover: rgba(255,255,255,.1);
+  --bg-overlay: rgba(0,0,0,.7);
+  --bg-header: rgba(15,23,42,.8);
+  --bg-nav: rgba(15,23,42,.95);
+  --bg-modal: #0f172a;
+  --bg-input: rgba(255,255,255,.1);
+  --bg-code: #1e293b;
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --text-muted: #475569;
+
+  --border-default: rgba(148,163,184,.15);
+  --border-active: rgba(52,211,153,.3);
+
+  --card-shadow: none;
+  --progress-bg: rgba(255,255,255,.1);
+}
+
+/* ── 浅色主题 ── */
+html[data-theme="light"] {
+  --bg-body: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-card-alt: #e2e8f0;
+  --bg-card-hover: #f1f5f9;
+  --bg-muted: rgba(0,0,0,.04);
+  --bg-muted-hover: rgba(0,0,0,.08);
+  --bg-overlay: rgba(0,0,0,.3);
+  --bg-header: rgba(255,255,255,.95);
+  --bg-nav: rgba(255,255,255,.95);
+  --bg-modal: #ffffff;
+  --bg-input: rgba(0,0,0,.06);
+  --bg-code: #f1f5f9;
+
+  --text-primary: #0f172a;
+  --text-secondary: #1e293b;
+  --text-tertiary: #334155;
+  --text-muted: #64748b;
+
+  --foreground-hsl: 222.2 84% 4.9%;
+
+  --border-default: rgba(0,0,0,.1);
+  --border-active: rgba(52,211,153,.5);
+
+  --card-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --progress-bg: rgba(0,0,0,.08);
+}
+
+/* ═════════════════════════════════════
+   通用覆盖 — 对所有 data-theme 生效
+   ═════════════════════════════════════ */
+
+/* 页面背景 */
+html[data-theme] body,
+html[data-theme] .min-h-screen,
+html[data-theme] .h-screen,
+html[data-theme] .bg-slate-950,
+html[data-theme] .bg-slate-900,
+html[data-theme] .bg-gray-900,
+html[data-theme] .bg-\[\#0f0f1a\],
+html[data-theme] .bg-\[\#1a1a2e\] {
+  background-color: var(--bg-body) !important;
+}
+
+/* 卡片/容器背景 */
+html[data-theme] .card,
+html[data-theme] .bg-slate-800,
+html[data-theme] .bg-gray-800,
+html[data-theme] .bg-white\/5,
+html[data-theme] .bg-white\/10 {
+  background-color: var(--bg-card) !important;
+}
+
+/* 弹窗/列表项交替色 */
+html[data-theme] .bg-slate-800\/80,
+html[data-theme] .bg-gray-800\/80 {
+  background-color: var(--bg-card) !important;
+}
+
+/* 渐变卡片（绿色系保留，其他卡片用变量） */
+html[data-theme] [class*="from-emerald"][class*="to-cyan"],
+html[data-theme] [class*="from-emerald"][class*="to-teal"] {
+  /* 保留绿色渐变卡片 */
+}
+
+/* 进度条背景 */
+html[data-theme] .bg-white\/10[role="progressbar"],
+html[data-theme] div[role="progressbar"] {
+  background-color: var(--progress-bg) !important;
+}
+
+/* ── Header / 导航 ── */
+html[data-theme] header.sticky,
+html[data-theme] [class*="sticky"][class*="z-40"] {
+  background-color: var(--bg-header) !important;
+  border-bottom-color: var(--border-default) !important;
+}
+html[data-theme] nav.fixed.bottom-0,
+html[data-theme] nav[class*="fixed"][class*="bottom-0"] {
+  background-color: var(--bg-nav) !important;
+  border-top-color: var(--border-default) !important;
+}
+
+/* ── 弹窗背景 ── */
+html[data-theme] .fixed.inset-0.z-50 > div:not(.bg-black):not([class*="bg-black"]),
+html[data-theme] [class*="fixed"][class*="inset-0"][class*="z-50"] > div:not(.bg-black):not([class*="bg-black"]),
+html[data-theme] .bg-gray-900.rounded-t-3xl,
+html[data-theme] .bg-\[\#1a1a2e\].rounded-2xl {
+  background-color: var(--bg-modal) !important;
+}
+
+/* ── 文字颜色 ── */
+/* 主要文字 — 比 text-gray-300 亮一级的变为主体色 */
+html[data-theme] body,
+html[data-theme] p,
+html[data-theme] h1, html[data-theme] h2, html[data-theme] h3,
+html[data-theme] h4, html[data-theme] h5, html[data-theme] h6,
+html[data-theme] button:not([class*="text-emerald"]):not([class*="text-orange"]):not([class*="text-blue"]):not([class*="text-yellow"]):not([class*="text-purple"]):not([class*="text-red"]):not([class*="text-rose"]):not([class*="text-cyan"]),
+html[data-theme] a, html[data-theme] li,
+html[data-theme] .text-gray-200,
+html[data-theme] .text-gray-300,
+html[data-theme] .text-slate-200,
+html[data-theme] .text-slate-300 {
+  color: var(--text-primary) !important;
+}
+
+/* 次要文字 */
+html[data-theme] .text-gray-400,
+html[data-theme] .text-gray-500,
+html[data-theme] .text-slate-400,
+html[data-theme] .text-slate-500 {
+  color: var(--text-secondary) !important;
+}
+
+/* 第三级文字（最淡的） */
+html[data-theme] .text-gray-600,
+html[data-theme] .text-slate-600 {
+  color: var(--text-tertiary) !important;
+}
+
+/* 白色文字（深色模式下用，浅色模式改为深色） */
+html[data-theme] .text-white:not([class*="text-emerald"]):not([class*="text-orange"]):not([class*="text-blue"]):not([class*="text-yellow"]):not([class*="text-purple"]):not([class*="text-red"]) {
+  color: var(--text-primary) !important;
+}
+
+/* ── 边框 ── */
+html[data-theme] .border-white\/5,
+html[data-theme] .border-white\/10,
+html[data-theme] .border-white\/20,
+html[data-theme] .border-gray-200,
+html[data-theme] [class*="border"][class*="white"] {
+  border-color: var(--border-default) !important;
+}
+
+html[data-theme] .border-white\/10[class*="bg-emerald"],
+html[data-theme] .border-emerald-500\/20 {
+  border-color: var(--border-active) !important;
+}
+
+/* ── 输入框 ── */
+html[data-theme] input,
+html[data-theme] textarea,
+html[data-theme] select,
+html[data-theme] .bg-white\/10[class*="rounded"],
+html[data-theme] [class*="bg-white"][class*="rounded"]:not([class*="emerald"]):not([class*="orange"]):not([class*="blue"]):not([class*="yellow"]):not([class*="purple"]):not([class*="red"]):not([class*="gradient"]) {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-default) !important;
+}
+
+/* placeholder 文字 */
+html[data-theme] input::placeholder,
+html[data-theme] textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* ── 弹窗顶部灰色横条 ── */
+html[data-theme] .bg-gray-600.rounded-full {
+  background-color: var(--text-muted) !important;
+}
+
+/* ── 分隔线 ── */
+html[data-theme] .border-t.border-white\/10,
+html[data-theme] .divide-white\/5,
+html[data-theme] hr {
+  border-color: var(--border-default) !important;
+}
+
+/* ── 数据为空时的占位区域 ── */
+html[data-theme] .text-center.py-6.text-gray-500 {
+  color: var(--text-tertiary) !important;
+}
+
+/* ── Glass 效果 ── */
+html[data-theme] .glass {
+  background-color: var(--bg-muted) !important;
+  border-color: var(--border-default) !important;
+}
+
+/* ── 教练评语的蓝色徽章 ── */
+html[data-theme] .bg-blue-500\/20.text-blue-400 {
+  background-color: rgba(59,130,246,.12) !important;
+  color: #3b82f6 !important;
+}
+
+/* ── 色卡区域（不覆盖有色卡，但内部文字可见） ── */
+/* 热量：橙色文字保持不变 */
+/* 蛋白质：蓝色文字保持不变 */
+/* 脂肪：黄色文字保持不变 */
+/* 碳水：紫色文字保持不变 */
+html[data-theme] .text-orange-400 { color: #fb923c !important; }
+html[data-theme] .text-blue-400 { color: #60a5fa !important; }
+html[data-theme] .text-yellow-400 { color: #facc15 !important; }
+html[data-theme] .text-purple-400 { color: #c084fc !important; }
+
+/* ── 特殊：搜索框 placeholder ── */
+html[data-theme] input::placeholder,
+html[data-theme] textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* ── 小圆点（状态指示器） ── */
+html[data-theme] .bg-gray-500 {
+  background-color: var(--text-tertiary) !important;
+}
+
+/* ── 数字/数值显示（白色大字） ── */
+html[data-theme] .text-white.font-bold:not([class*="text-emerald"]) {
+  color: var(--text-primary) !important;
+}
+
+/* ── 白色的 emoji/图标背景 ── */
+html[data-theme] .text-white:not([class*="text-emerald"]):not([class*="text-blue"]):not([class*="text-orange"]):not([class*="text-yellow"]):not([class*="text-purple"]):not([class*="text-red"]):not([class*="text-rose"]):not([class*="text-pink"]):not([class*="text-cyan"]) {
+  color: var(--text-primary) !important;
+}

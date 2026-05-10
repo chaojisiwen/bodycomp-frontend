@@ -665,3 +665,62 @@ export async function getMemberBodyRecords(memberId: string, limit: number = 10)
     return res.data as any[]
   } catch { return [] }
 }
+
+// ============================================================
+// 会员计划目标云端同步
+// ============================================================
+
+/**
+ * 同步会员的个人计划目标到 CloudBase
+ * 写入 coach_members 集合的 member_plan 字段
+ * 教练端可通过 getCoachMemberList 或 getMemberPlanTarget 查询
+ */
+export async function syncMemberPlanTarget(target: Record<string, unknown>): Promise<void> {
+  const { getApp, COLLECTIONS: C } = await import('../index')
+  try {
+    const db = getApp()?.database()
+    if (!db) return
+
+    const stored = JSON.parse(localStorage.getItem('user') || '{}')
+    const memberId = stored?.id
+    if (!memberId) return
+
+    const existing = await db
+      .collection(C.COACH_MEMBERS)
+      .where({ member_id: memberId })
+      .limit(1)
+      .get()
+
+    if (existing.data && existing.data.length > 0) {
+      await db
+        .collection(C.COACH_MEMBERS)
+        .doc(existing.data[0]._id)
+        .update({
+          member_plan: JSON.parse(JSON.stringify(target)),
+          plan_updated_at: new Date(),
+        })
+    }
+  } catch (error) {
+    console.warn('[Coach] syncMemberPlanTarget 失败:', error)
+  }
+}
+
+/**
+ * 获取会员的最新计划目标
+ */
+export async function getMemberPlanTarget(memberId: string): Promise<Record<string, unknown> | null> {
+  const { getApp, COLLECTIONS: C } = await import('../index')
+  try {
+    const db = getApp()?.database()
+    if (!db) return null
+
+    const res = await db
+      .collection(C.COACH_MEMBERS)
+      .where({ member_id: memberId })
+      .limit(1)
+      .get()
+
+    const plan = (res.data?.[0] as any)?.member_plan
+    return plan || null
+  } catch { return null }
+}

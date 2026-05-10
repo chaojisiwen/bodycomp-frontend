@@ -12,18 +12,21 @@ import {
   Edit,
   RefreshCw,
   Loader2,
+  Sun,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { BottomModal } from '@/components/common/BottomModal'
 import { CoachMenuItem } from '@/components/coach/CoachMenuItem'
 import { CoachEditProfileModal } from '@/components/coach/CoachEditProfileModal'
 import { useAuth } from '@/contexts/AuthContext'
+import { useTheme } from '@/contexts/ThemeContext'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { useCoachProfileStore } from '@/stores/coachProfileStore'
 
 export function CoachProfilePage({ onSwitchToMember }: { onSwitchToMember?: () => void }) {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const { unreadCount } = useNotificationStore()
   const { profile, isLoading, fetchProfile } = useCoachProfileStore()
 
@@ -80,6 +83,12 @@ export function CoachProfilePage({ onSwitchToMember }: { onSwitchToMember?: () =
           icon: <Bell className="w-5 h-5 text-cyan-400" />,
           label: '通知设置',
           onClick: () => setShowNotificationModal(true)
+        },
+        {
+          icon: <Sun className="w-5 h-5 text-yellow-400" />,
+          label: '风格切换',
+          badge: theme === 'dark' ? '深色' : '浅色',
+          onClick: () => toggleTheme()
         },
         {
           icon: <HelpCircle className="w-5 h-5 text-gray-400" />,

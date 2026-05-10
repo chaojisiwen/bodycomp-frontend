@@ -36,6 +36,12 @@
   }
 }
 
+/* 浅色主题 — 覆盖 body 文字颜色（使用属性选择器确保优先级） */
+html[data-theme="light"] body {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
 /* Glass effect */
 .glass {
   background-color: rgba(255, 255, 255, 0.05);

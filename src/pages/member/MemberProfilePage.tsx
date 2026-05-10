@@ -26,12 +26,15 @@ import {
   UserPlus,
   Link2,
   Inbox,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { useProfileStore } from '@/stores'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { usePlanTarget } from '@/stores/planStore'
 import { useAuth } from '@/contexts/AuthContext'
+import { useTheme } from '@/contexts/ThemeContext'
 import { getCoaches, bindCoach, unbindCoach } from '@/cloudbase/services/coach'
 import { updateCurrentUserProfile } from '@/cloudbase/services'
 
@@ -153,6 +156,7 @@ function MenuItem({ icon, label, badge, onClick, danger }: MenuItemData) {
 export function MemberProfilePage() {
   const navigate = useNavigate()
   const { user, login } = useAuth()
+  const { theme, toggleTheme } = useTheme()
 
   // ── profileStore（头像、姓名、会员编号、打卡天数、目标） ──
   const { profile, setProfile, setGoal, fetchProfile, hasCoach, setHasCoach, currentCoach, setCoach } = useProfileStore()
@@ -344,6 +348,7 @@ export function MemberProfilePage() {
       title: '账户设置',
       items: [
         { icon: <Bell className="w-5 h-5 text-rose-400" />, label: '通知设置', onClick: () => open('notification') },
+        { icon: <Sun className="w-5 h-5 text-yellow-400" />, label: '风格切换', badge: theme === 'dark' ? '深色' : '浅色', onClick: () => toggleTheme() },
         { icon: <HelpCircle className="w-5 h-5 text-cyan-400" />, label: '帮助与反馈', onClick: () => open('feedback') },
       ],
     },

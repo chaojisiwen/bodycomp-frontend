@@ -85,6 +85,57 @@ const DEFAULT_TRAINING: TrainingItem[] = [
 // 会员计划目标（用于首页展示和编辑）
 // ============================================================
 
+/** 计划类型 */
+export type PlanTypeOption = 'fat-loss' | 'muscle-gain' | 'body-shape' | 'performance'
+
+export const PLAN_TYPE_LABELS: Record<PlanTypeOption, string> = {
+  'fat-loss': '减脂计划',
+  'muscle-gain': '增肌计划',
+  'body-shape': '塑形计划',
+  'performance': '运动表现提升计划',
+}
+
+/** 每日训练安排 */
+export interface DaySchedule {
+  type: 'strength' | 'cardio' | 'aerobic' | 'other'
+  note?: string
+}
+
+export const DAY_SCHEDULE_LABELS: Record<DaySchedule['type'], string> = {
+  strength: '力量训练',
+  cardio: '心肺训练',
+  aerobic: '有氧训练',
+  other: '其他',
+}
+
+/** 每周训练安排 */
+export interface WeekSchedule {
+  monday?: DaySchedule
+  tuesday?: DaySchedule
+  wednesday?: DaySchedule
+  thursday?: DaySchedule
+  friday?: DaySchedule
+  saturday?: DaySchedule
+  sunday?: DaySchedule
+}
+
+export const WEEKDAY_LABELS: (keyof WeekSchedule)[] = [
+  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
+]
+
+export const WEEKDAY_ZH: Record<keyof WeekSchedule, string> = {
+  monday: '周一', tuesday: '周二', wednesday: '周三',
+  thursday: '周四', friday: '周五', saturday: '周六', sunday: '周日',
+}
+
+// 色卡样式映射（放在组件外避免 esbuild JSX 解析干扰）
+export const NUTRIENT_STYLES: Record<string, { card: string; text: string }> = {
+  orange: { card: 'bg-orange-400 bg-opacity-10', text: 'text-orange-400' },
+  blue: { card: 'bg-blue-400 bg-opacity-10', text: 'text-blue-400' },
+  yellow: { card: 'bg-yellow-400 bg-opacity-10', text: 'text-yellow-400' },
+  purple: { card: 'bg-purple-400 bg-opacity-10', text: 'text-purple-400' },
+}
+
 export interface PlanTarget {
   startDate: string
   endDate: string
@@ -94,7 +145,16 @@ export interface PlanTarget {
   targetFat: number
   targetCarb: number
 
-  // 体成分目标进度（新增，可选，向后兼容）
+  // 计划类型（用户手动选择，不再靠数值推断）
+  planType: PlanTypeOption
+
+  // 每周训练安排
+  weeklySchedule: WeekSchedule
+
+  // 每周训练打卡记录 { monday: 时间戳, ... }
+  weeklyCompleted: Record<string, number>
+
+  // 体成分目标进度（可选，向后兼容）
   bodyGoalMetric?: BodyGoalMetric
   bodyGoalTarget?: number
   bodyGoalStart?: number   // 设置目标时的起始值
@@ -136,6 +196,9 @@ const DEFAULT_PLAN_TARGET: PlanTarget = {
   targetProtein: 120,
   targetFat: 60,
   targetCarb: 150,
+  planType: 'fat-loss',
+  weeklySchedule: {},
+  weeklyCompleted: {},
 }
 
 // ============================================================
@@ -151,13 +214,31 @@ export const usePlanTargetStore = create<PlanTargetState>()(
   persist(
     (set) => ({
       planTarget: DEFAULT_PLAN_TARGET,
-      setPlanTarget: (planTarget) => set({ planTarget }),
+      setPlanTarget: (planTarget) => {
+        set({ planTarget })
+        // 同步到云端（异步，不阻塞 UI）
+        syncPlanTargetToCloud(planTarget).catch(() => {})
+      },
     }),
     {
       name: 'plan-target',
     }
   )
 )
+
+/**
+ * 同步计划目标到云端（coach_members 集合）
+ * 每次 setPlanTarget 时自动触发
+ */
+async function syncPlanTargetToCloud(target: PlanTarget): Promise<void> {
+  try {
+    const { syncMemberPlanTarget } = await import('@/cloudbase/services/coach')
+    await syncMemberPlanTarget(target as unknown as Record<string, unknown>)
+  } catch (error) {
+    console.warn('[PlanTarget] 云端同步失败:', error)
+    // 静默失败，不影响本地使用
+  }
+}
 
 /**
  * 获取会员个人计划目标

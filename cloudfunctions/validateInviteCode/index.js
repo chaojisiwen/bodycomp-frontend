@@ -168,6 +168,17 @@ exports.main = async (event, context) => {
       }
     }
 
+        // ── 确保 role 与邀请码前缀一致（修复旧数据错误）──
+    if (normalizedCode.startsWith('C-') && user.role !== 'coach') {
+      console.log('[validateInviteCode] ⚠️ 修正 role: 数据库中是', user.role, '但邀请码前缀是 C-，应改为 coach')
+      await db.collection('users').doc(user._id).update({ data: { role: 'coach', updated_at: db.serverDate() } })
+      user.role = 'coach'
+    } else if (normalizedCode.startsWith('M-') && user.role !== 'member') {
+      console.log('[validateInviteCode] ⚠️ 修正 role: 数据库中是', user.role, '但邀请码前缀是 M-，应改为 member')
+      await db.collection('users').doc(user._id).update({ data: { role: 'member', updated_at: db.serverDate() } })
+      user.role = 'member'
+    }
+
     // ── 需要密码但没有传 ──
     if (!password) {
       return {

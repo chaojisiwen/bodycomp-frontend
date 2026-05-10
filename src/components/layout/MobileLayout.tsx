@@ -7,7 +7,7 @@
  * - URL 同步（react-router-dom）
  */
 
-import { Home, UtensilsCrossed, Flame, BarChart3, Users, AlertTriangle, ClipboardList, UserCircle, MessageSquare } from 'lucide-react'
+import { Home, UtensilsCrossed, Flame, BarChart3, Users, AlertTriangle, ClipboardList, UserCircle } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNotificationStore } from '@/stores/notificationStore'
@@ -33,7 +33,6 @@ const memberTabs: TabItem[] = [
   { id: 'intake', label: '摄入', icon: UtensilsCrossed, path: '/member/intake' },
   { id: 'exercise', label: '消耗', icon: Flame, path: '/member/exercise' },
   { id: 'bodyData', label: '数据', icon: BarChart3, path: '/member/body-data' },
-  { id: 'messages', label: '消息', icon: MessageSquare, path: '/member/messages' },
 ]
 
 // 教练端 Tab 配置（badge 动态设置）
