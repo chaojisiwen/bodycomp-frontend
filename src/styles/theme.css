@@ -248,6 +248,14 @@ html[data-theme] .text-2xl.font-bold:not([class*="text-emerald"]):not([class*="t
   color: var(--text-primary) !important;
 }
 
+/* ── 运动类型分布里的文字（无颜色类的 span/div） ── */
+html[data-theme] .font-medium:not([class*="text-"]) {
+  color: var(--text-primary) !important;
+}
+html[data-theme] .flex-1:not([class*="text-"]) {
+  color: var(--text-primary) !important;
+}
+
 /* ── 运动类型分布里的文字 ── */
 html[data-theme] .text-xs.text-gray-400 {
   color: var(--text-secondary) !important;
