@@ -239,30 +239,9 @@ html[data-theme] .bg-gray-500 {
   background-color: var(--text-tertiary) !important;
 }
 
-/* ── 登录页（使用硬编码颜色，不受 data-theme 控制） ── */
-html[data-theme] .bg-gradient-to-br.from-emerald-50.to-teal-100 {
-  background: var(--bg-body) !important;
-}
-html[data-theme] h1.text-gray-800,
-html[data-theme] h2.text-gray-800,
-html[data-theme] .text-gray-800 {
-  color: var(--text-primary) !important;
-}
-html[data-theme] .text-gray-500 {
-  color: var(--text-secondary) !important;
-}
-html[data-theme] .text-gray-700 {
-  color: var(--text-primary) !important;
-}
-html[data-theme] .bg-white.rounded-2xl {
-  background-color: var(--bg-card) !important;
-}
-html[data-theme] .placeholder-gray-400::placeholder {
-  color: var(--text-muted) !important;
-}
-html[data-theme] .border-gray-200 {
-  border-color: var(--border-default) !important;
-}
+/* ── 登录页 ── */
+/* 登录页有自己的独立设计，不受 data-theme 控制 */
+/* 登录页组件中通过 useEffect 临时移除 data-theme 属性实现 */
 
 /* ── 摄入/消耗页面的白色大字 ── */
 html[data-theme] .text-2xl.font-bold:not([class*="text-emerald"]):not([class*="text-blue"]):not([class*="text-orange"]):not([class*="text-yellow"]):not([class*="text-purple"]) {

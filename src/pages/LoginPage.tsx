@@ -9,7 +9,7 @@
 //   - Mock 降级仅在 DEV 环境生效，生产环境必须走云函数
 // ============================================================
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getApp, initCloudbase, callCloudFunction } from '@/cloudbase'
 import { setCurrentUser } from '@/cloudbase/services/auth'
@@ -45,6 +45,16 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [step, setStep] = useState<'code' | 'password' | 'setPassword'>('code')
   const [loginData, setLoginData] = useState<LoginResponse['data'] | null>(null)
+
+  // 登录页独立于主题系统，挂载时移除 data-theme 防止主题 CSS 覆盖硬编码颜色
+  useEffect(() => {
+    const html = document.documentElement
+    const prevTheme = html.getAttribute('data-theme')
+    html.removeAttribute('data-theme')
+    return () => {
+      if (prevTheme) html.setAttribute('data-theme', prevTheme)
+    }
+  }, [])
 
   // 表单引用，供重试按钮调用
   const formRef = useRef<HTMLFormElement>(null)
